@@ -141,6 +141,32 @@ tr:last-child td{border-bottom:0}
 .nodata{display:flex;flex-wrap:wrap;gap:6px}
 .nodata .chip{background:var(--warn-soft);color:var(--warn);border-color:transparent}
 @media (max-width:480px){.mapinfo{height:11em}}
+/* ---- 영입 지도 ---- */
+.rchips{display:flex;flex-wrap:wrap;gap:6px}
+.rlist{display:flex;flex-direction:column;gap:10px}
+.rlist details{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.rlist summary{list-style:none;cursor:pointer;padding:12px 16px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.rlist summary::-webkit-details-marker{display:none}
+.rlist summary .rk{font-family:var(--f-mono);color:var(--muted)}
+.rlist summary .jb{font-weight:700;font-size:16px}
+.rlist summary .gs{font-size:13px;color:var(--mutual);flex:1 1 200px;min-width:0}
+.rlist summary .cnt{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--ink);color:var(--surface);white-space:nowrap}
+.rlist summary .cnt::after{content:" ▾"}
+.rlist details[open] summary .cnt::after{content:" ▴"}
+.rbody{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+.rstar{display:block;width:100%;max-width:520px;height:auto;margin:0 auto}
+.rstar text{font-family:var(--f-body)}
+.rstar .c0{fill:var(--line);stroke:var(--muted);stroke-width:2;stroke-dasharray:5 4}
+.rstar .c0t{fill:var(--ink);font-weight:700}
+.rstar .pm{fill:var(--cust)}
+.rstar .pmt{fill:var(--surface);font-weight:700}
+.rstar .lb{fill:var(--muted)}
+.rstar .lg{fill:var(--mutual);font-weight:600}
+.rstar .ar{stroke:var(--give);stroke-width:3}
+.rstar .ah{fill:var(--give)}
+.rcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+.rcards>div{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:13px;min-width:0}
+.rcards b{color:var(--cust)}
 </style>
 </head>
 <body>
@@ -162,6 +188,7 @@ tr:last-child td{border-bottom:0}
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-rec" aria-selected="true">121 추천</button>
     <button role="tab" id="tab-map" aria-selected="false">선샤인 지도</button>
+    <button role="tab" id="tab-recruit" aria-selected="false">영입 지도</button>
     <button role="tab" id="tab-data" aria-selected="false">데이터 점검</button>
     <button role="tab" id="tab-how" aria-selected="false">점수 기준</button>
   </div>
@@ -191,6 +218,12 @@ tr:last-child td{border-bottom:0}
     <div class="mapbox" id="mapBox"></div>
     <div class="mapleg"><span><i class="a"></i>나</span><span><i></i>멤버</span><span><i class="g"></i>고객군</span><span><i class="x"></i>빈 직군 (영입 후보)</span><span>진한 초록선 = 서로 지목 · 노란 화살표 = 한쪽 지목</span></div>
     <div id="mapNoData" class="sect"></div>
+  </section>
+
+  <section id="pane-recruit" class="sect" hidden>
+    <p class="note">챕터에 없는데 멤버들이 상생업종으로 꼽은 업종이에요. 꼽은 멤버가 많을수록 영입했을 때 바로 연결될 멤버가 많아요. 비지터 초대 우선순위로 쓰세요.</p>
+    <div class="rchips" id="recChips"></div>
+    <div class="rlist" id="recList"></div>
   </section>
 
   <section id="pane-data" class="sect" hidden>
@@ -362,10 +395,11 @@ function renderData(){
     syn.map(([s,ns])=>`<tr><td>${esc(s)}</td><td>${ns.length}</td><td>${SYN[s]?'<span class="tag t-m">'+esc(SYN[s].join(', '))+'</span>':'<span class="tag t-w">챕터에 없음</span>'}</td><td class="note">${esc(ns.join(', '))}</td></tr>`).join('');
 }
 
-const tabs=['rec','map','data','how'];
+const tabs=['rec','map','recruit','data','how'];
 function showTab(t){
   tabs.forEach(x=>{document.getElementById('tab-'+x).setAttribute('aria-selected',x===t);document.getElementById('pane-'+x).hidden=x!==t;});
   if(t==='map') renderMap();
+  if(t==='recruit') renderRecruit();
 }
 tabs.forEach(t=>document.getElementById('tab-'+t).addEventListener('click',()=>showTab(t)));
 
@@ -595,6 +629,42 @@ infoEl.addEventListener('click',e=>{
 sel.addEventListener('change',()=>{ if(mapOn()) renderMap(); });
 let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(!mapOn()) return; const W=Math.max(280,mapEl.clientWidth||800), s=Math.min(1.1,(W-8)/800);
   const b=[(Math.max(13,10.5/s))|0,(Math.max(12,8.8/s))|0].join(); if(b!==mapBucket) renderMap(); },150); });
+
+/* ================= 영입 지도 ================= */
+function renderRecruit(){
+  const rows=Object.entries(emptyJobs).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],'ko'));
+  const topGroups=ns=>{ const c={}; ns.forEach(n=>groupsOf(byName[n]).forEach(g=>c[g]=(c[g]||0)+1));
+    return Object.entries(c).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ko')).map(x=>x[0]); };
+  const multi=rows.filter(r=>r[1].length>=2).length;
+  document.getElementById('recChips').innerHTML=
+    `<span class="chip">영입 후보 직군 ${rows.length}개</span><span class="chip">2명 이상이 꼽은 직군 ${multi}개</span><span class="chip">고객군 ${gList.length}개</span>`;
+  const cut=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s;
+  const star=(job,ns)=>{
+    const W=520,H=430,cx=W/2,cy=H/2,R0=54,R=146,r=30; let h='';
+    ns.forEach((n,i)=>{
+      const a=-Math.PI/2+i/ns.length*Math.PI*2, x=cx+R*Math.cos(a), y=cy+R*Math.sin(a);
+      const d=Math.hypot(x-cx,y-cy), ux=(cx-x)/d, uy=(cy-y)/d;
+      h+=`<line class="ar" x1="${(x+ux*(r+4)).toFixed(1)}" y1="${(y+uy*(r+4)).toFixed(1)}" x2="${(cx-ux*(R0+12)).toFixed(1)}" y2="${(cy-uy*(R0+12)).toFixed(1)}" marker-end="url(#rah)"/>`;
+      const m=byName[n], g=groupsOf(m)[0]||'', up=Math.sin(a)<-0.5; // 위쪽 멤버는 라벨을 원 위에 (화살표와 겹치지 않게)
+      h+=`<circle class="pm" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}"/><text class="pmt" x="${x.toFixed(1)}" y="${(y+5).toFixed(1)}" font-size="14" text-anchor="middle">${esc(n)}</text>
+        <text class="lb" x="${x.toFixed(1)}" y="${(up?y-r-24:y+r+15).toFixed(1)}" font-size="12" text-anchor="middle">${esc(cut(m.f,12))}</text>
+        ${g?`<text class="lg" x="${x.toFixed(1)}" y="${(up?y-r-9:y+r+30).toFixed(1)}" font-size="12" text-anchor="middle">● ${esc(cut(g,11))}</text>`:''}`;
+    });
+    const words=job.length>7?[job.slice(0,Math.ceil(job.length/2)),job.slice(Math.ceil(job.length/2))]:[job];
+    return `<svg class="rstar" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(job)}을(를) 꼽은 멤버 ${ns.length}명">
+      <defs><marker id="rah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>
+      ${h}<circle class="c0" cx="${cx}" cy="${cy}" r="${R0}"/>
+      ${words.map((w,i)=>`<text class="c0t" x="${cx}" y="${(cy+5+(i-(words.length-1)/2)*17).toFixed(1)}" font-size="15" text-anchor="middle">${esc(w)}</text>`).join('')}</svg>`;
+  };
+  document.getElementById('recList').innerHTML=rows.map(([job,ns],i)=>{
+    const gs=topGroups(ns);
+    return `<details${i===0?' open':''}><summary><span class="rk">#${i+1}</span><span class="jb">${esc(job)}</span>
+      <span class="gs">${gs.length?'● '+esc(gs.slice(0,3).join(' · '))+(gs.length>3?` 외 ${gs.length-3}`:''):''}</span><span class="cnt">${ns.length}명이 꼽음</span></summary>
+      <div class="rbody"><p class="note" style="margin:0">아래 멤버들이 '${esc(job)}'을(를) 상생업종으로 꼽았지만 챕터에 이 일을 하는 멤버가 없어요. 화살표는 영입하면 리퍼럴이 흐를 방향이에요.</p>
+      ${star(job,ns)}
+      <div class="rcards">${ns.map(n=>{const m=byName[n],g=groupsOf(m);return `<div><b>${esc(n)} 대표</b> <span class="note">${esc(m.f)}</span><br>${g.length?'● '+esc(g.join(', ')):''}${m.who?`<br><span class="note">타겟 고객: ${esc(m.who)}</span>`:''}</div>`}).join('')}</div></div></details>`;
+  }).join('');
+}
 
 }).catch(err=>{
   document.querySelector('.wrap').insertAdjacentHTML('afterbegin','<div class="empty"><b>데이터를 불러오지 못했어요.</b><br>data 폴더의 JSON 3개가 같은 위치에 있는지 확인하고, 파일을 더블클릭하지 말고 웹주소(GitHub Pages)나 로컬 서버로 열어주세요.<br><span class="note">'+String(err)+'</span></div>');
