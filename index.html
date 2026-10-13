@@ -224,6 +224,7 @@ tr:last-child td{border-bottom:0}
     <p class="note">챕터에 없는데 멤버들이 상생업종으로 꼽은 업종이에요. 꼽은 멤버가 많을수록 영입했을 때 바로 연결될 멤버가 많아요. 비지터 초대 우선순위로 쓰세요.</p>
     <div class="rchips" id="recChips"></div>
     <div class="rlist" id="recList"></div>
+    <div class="empty" id="recNotJob"></div>
   </section>
 
   <section id="pane-data" class="sect" hidden>
@@ -254,8 +255,8 @@ tr:last-child td{border-bottom:0}
 </div>
 
 <script>
-const fetch_all=()=>Promise.all(['members','groups','synergy-map'].map(n=>fetch('data/'+n+'.json').then(r=>{if(!r.ok)throw new Error(n+'.json '+r.status);return r.json()})));
-fetch_all().then(([MEMBERS,GROUPS,SYN])=>{
+const fetch_all=()=>Promise.all(['members','groups','synergy-map','partner-groups'].map(n=>fetch('data/'+n+'.json').then(r=>{if(!r.ok)throw new Error(n+'.json '+r.status);return r.json()})));
+fetch_all().then(([MEMBERS,GROUPS,SYN,PG])=>{
 
 // 고객 표현 → 고객군 묶음
 const RAW2G = {}; Object.entries(GROUPS).forEach(([g,arr])=>arr.forEach(r=>RAW2G[r]=g));
@@ -411,7 +412,12 @@ const mapEmpty = MEMBERS.filter(m=>!hasData(m));
 const MG = {C:400, RG:112, RM:300, RE:218};
 const TAU = Math.PI*2;
 const gList = Object.keys(GROUPS).filter(g=>GDF[g]);
-const emptyJobs = (()=>{ const o={}; mapMembers.forEach(m=>m.s.forEach(s=>{ if(!SYN[s]) (o[s]=o[s]||[]).push(m.n); })); return o; })();
+// 상생업종 표현 → 표준 업종 (partner-groups.json). 묶음에 없으면 표현 그대로, notJob은 업종이 아니라 영입 후보에서 뺀다
+const STDJOB = {}; Object.entries(PG.groups).forEach(([g,arr])=>arr.forEach(r=>STDJOB[r]=g));
+const NOTJOB = new Set(PG.notJob);
+const emptyRaw = {};   // 표준 업종 → 묶인 원래 표현들
+const emptyJobs = (()=>{ const o={}; mapMembers.forEach(m=>m.s.forEach(s=>{ if(SYN[s]||NOTJOB.has(s)) return;
+  const k=STDJOB[s]||s; o[k]=o[k]||[]; if(!o[k].includes(m.n)) o[k].push(m.n); (emptyRaw[k]=emptyRaw[k]||new Set()).add(s); })); return o; })();
 
 // 상생선: 꼽은 사람 → 그 업종을 하는 챕터 멤버 (지도에 있는 멤버끼리만)
 const onMap = new Set(mapMembers.map(m=>m.n));
@@ -580,7 +586,7 @@ function applyFocus(f){
     const out=[],inn=[];
     svg.querySelectorAll('.es').forEach(e=>{ const a=e.dataset.a,b=e.dataset.b;
       if(a===m.n||b===m.n){ const o=a===m.n?b:a; (a===m.n?out:inn).push(o); if(showS){on(e);on(nodes.m[o]);} } });
-    const em=m.s.filter(x=>!SYN[x]);
+    const em=[...new Set(m.s.filter(x=>!SYN[x]&&!NOTJOB.has(x)).map(x=>STDJOB[x]||x))];
     svg.querySelectorAll('.ee').forEach(e=>{ if(e.dataset.m===m.n && showE){ on(e); on(nodes.e[e.dataset.e]); } });
     html=`<b>${esc(m.n)}</b> 대표 · ${esc(m.co)} · ${esc(m.f)}${m.n===sel.value?' <span class="chip c">나</span>':''}<br>`+
       `고객군: ${gs.length?names(gs):'없음'}<br>`+
@@ -660,10 +666,14 @@ function renderRecruit(){
     const gs=topGroups(ns);
     return `<details${i===0?' open':''}><summary><span class="rk">#${i+1}</span><span class="jb">${esc(job)}</span>
       <span class="gs">${gs.length?'● '+esc(gs.slice(0,3).join(' · '))+(gs.length>3?` 외 ${gs.length-3}`:''):''}</span><span class="cnt">${ns.length}명이 꼽음</span></summary>
-      <div class="rbody"><p class="note" style="margin:0">아래 멤버들이 '${esc(job)}'을(를) 상생업종으로 꼽았지만 챕터에 이 일을 하는 멤버가 없어요. 화살표는 영입하면 리퍼럴이 흐를 방향이에요.</p>
+      <div class="rbody">${emptyRaw[job].size>1?`<p class="note" style="margin:0">묶은 표현: ${esc([...emptyRaw[job]].join(', '))}</p>`:''}
+      <p class="note" style="margin:0">아래 멤버들이 '${esc(job)}'을(를) 상생업종으로 꼽았지만 챕터에 이 일을 하는 멤버가 없어요. 화살표는 영입하면 리퍼럴이 흐를 방향이에요.</p>
       ${star(job,ns)}
       <div class="rcards">${ns.map(n=>{const m=byName[n],g=groupsOf(m);return `<div><b>${esc(n)} 대표</b> <span class="note">${esc(m.f)}</span><br>${g.length?'● '+esc(g.join(', ')):''}${m.who?`<br><span class="note">타겟 고객: ${esc(m.who)}</span>`:''}</div>`}).join('')}</div></div></details>`;
   }).join('');
+  const nj=[...NOTJOB].map(x=>[x,MEMBERS.filter(m=>m.s.includes(x)).map(m=>m.n)]).filter(x=>x[1].length);
+  document.getElementById('recNotJob').innerHTML = nj.length ? `<b>업종이 아니라 고객 유형으로 보이는 표현 ${nj.length}개 (영입 순위에서 뺐어요, 확인 필요)</b><br>`+
+    nj.map(([x,ns])=>`${esc(x)} (${esc(ns.join(', '))})`).join(' · ') : '';
 }
 
 }).catch(err=>{
