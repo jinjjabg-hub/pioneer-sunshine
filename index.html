@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>파이오니어 121 매칭</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 좌측 고정 폭 컬럼 하나. 상단 '나' 선택 → 요약 → 탭 → 추천 카드 목록 */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --ink:#1c232b; --muted:#5d6670; --line:#dfe2df;
+  --accent:#a8262e; --accent-soft:#f6e3e2;
+  --mutual:#1f6f63; --mutual-soft:#dcefe9;
+  --give:#9a6a12; --give-soft:#f5ead2;
+  --cust:#3b5a8c; --cust-soft:#e1e8f4;
+  --warn:#8a5a00; --warn-soft:#fbefd2;
+  --f-display:"Gowun Batang", "Nanum Myeongjo", serif;
+  --f-body:"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14181d; --surface:#1c2228; --ink:#e7eaec; --muted:#9aa3ab; --line:#2d353d;
+  --accent:#e2646a; --accent-soft:#3a2224;
+  --mutual:#5cc2ad; --mutual-soft:#1c3631;
+  --give:#e0b25a; --give-soft:#3a2f1a;
+  --cust:#8eaee0; --cust-soft:#1f2b3d;
+  --warn:#e8b44c; --warn-soft:#3a2f17; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181d; --surface:#1c2228; --ink:#e7eaec; --muted:#9aa3ab; --line:#2d353d;
+  --accent:#e2646a; --accent-soft:#3a2224;
+  --mutual:#5cc2ad; --mutual-soft:#1c3631;
+  --give:#e0b25a; --give-soft:#3a2f1a;
+  --cust:#8eaee0; --cust-soft:#1f2b3d;
+  --warn:#e8b44c; --warn-soft:#3a2f17; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;padding-inline:16px;padding-block:24px 64px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-family:var(--f-display);font-size:30px;line-height:1.25;margin:0;text-wrap:balance}
+h2{font-size:17px;margin:0}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--accent);font-weight:600}
+.lede{color:var(--muted);margin:6px 0 0;max-width:62ch}
+.picker{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.picker label{font-weight:600}
+select{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-width:0;max-width:100%}
+select:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.me{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.me>div{min-width:0}
+.k{font-size:12px;color:var(--muted);letter-spacing:.04em;margin-bottom:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:13px;padding:2px 9px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
+.chip.c{background:var(--cust-soft);border-color:transparent;color:var(--cust)}
+.chip.s{background:var(--give-soft);border-color:transparent;color:var(--give)}
+.chip.miss{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.oneliner{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px;white-space:pre-line}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{font:inherit;font-weight:600;background:none;border:0;padding:10px 14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.toggle{display:flex;gap:6px;align-items:center;cursor:pointer}
+.list{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;grid-template-columns:34px 1fr;gap:4px 12px}
+.card.done{opacity:.55}
+.rank{font-family:var(--f-mono);font-size:15px;color:var(--muted);padding-top:2px}
+.body{min-width:0;display:flex;flex-direction:column;gap:10px}
+.head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
+.name{font-size:17px;font-weight:700}
+.sub{color:var(--muted);font-size:13px}
+.score{font-family:var(--f-mono);font-size:15px;font-variant-numeric:tabular-nums}
+.score b{font-size:20px}
+.meter{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--bg)}
+.meter span{display:block;height:100%}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px}
+.t-m{background:var(--mutual-soft);color:var(--mutual)}
+.t-g{background:var(--give-soft);color:var(--give)}
+.t-c{background:var(--cust-soft);color:var(--cust)}
+.t-w{background:var(--warn-soft);color:var(--warn)}
+ul.why{margin:0;padding-left:18px;font-size:14px}
+ul.why li{margin:2px 0}
+.q{border-top:1px dashed var(--line);padding-top:10px}
+.q ol{margin:4px 0 0;padding-left:20px;font-size:14px}
+.q ol li{margin:4px 0}
+.foot{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.btn.on{background:var(--mutual-soft);color:var(--mutual);border-color:transparent}
+.empty{font-size:14px;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:14px 16px}
+.note{font-size:13px;color:var(--muted)}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.sect{display:flex;flex-direction:column;gap:10px}
+.method{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:14px}
+.method table{font-size:13px}
+@media (max-width:480px){h1{font-size:25px}.card{grid-template-columns:1fr}.rank{padding:0}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* 탭 패널 숨김이 .sect{display:flex}에 덮이지 않게 */
+[hidden]{display:none!important}
+/* ---- 선샤인 지도 ---- */
+.maptools{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:14px}
+.maptools label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.mapinfo{height:7.6em;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px}
+.mapinfo b{font-weight:700}
+.mapinfo .act{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.mapbox{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px}
+.mapbox svg{display:block;width:100%;height:auto;max-width:800px;margin:0 auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.mapbox text{font-family:var(--f-body);fill:var(--ink);paint-order:stroke;stroke:var(--surface);stroke-width:3.5px;stroke-linejoin:round;pointer-events:all}
+.mapbox [data-k]{cursor:pointer;outline:none}
+.mapbox [data-k]:focus-visible .ring{stroke:var(--accent);stroke-width:3;fill:none}
+.mapbox .hit{fill:transparent}
+.mapbox .ring{fill:none;stroke:none}
+.gn .dot{fill:var(--cust-soft);stroke:var(--cust);stroke-width:1.6}
+.gn text{fill:var(--cust);font-weight:600}
+.mn .dot{fill:var(--surface);stroke:var(--ink);stroke-width:1.6}
+.mn.me .dot{fill:var(--accent);stroke:var(--accent)}
+.mn.me text{fill:var(--accent);font-weight:700}
+.en .dot{fill:var(--muted);fill-opacity:.55;stroke:var(--muted);stroke-width:1}
+.en text{fill:var(--muted);display:none}
+.en.lbl text,.en.on text{display:block}
+.eg{stroke:var(--cust);stroke-width:1;opacity:.32}
+.es{fill:none;stroke:var(--give);stroke-width:1.4;opacity:.6}
+.es.mut{stroke:var(--mutual);stroke-width:2.6;opacity:.85}
+.ee{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.45}
+.arrow{fill:var(--give)}
+.hide-g .eg,.hide-s .es,.hide-e .ee,.hide-e .en{display:none}
+.focus .n:not(.on),.focus .e:not(.on){opacity:.09}
+.focus .e.on{opacity:1;stroke-width:2.2}
+.focus .es.mut.on{stroke-width:3.4}
+.focus .en.on text{display:block}
+.mapleg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.mapleg i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1.5px solid var(--ink);background:var(--surface)}
+.mapleg i.a{background:var(--accent);border-color:var(--accent)}
+.mapleg i.g{background:var(--cust-soft);border-color:var(--cust)}
+.mapleg i.x{background:var(--muted);border-color:var(--muted);opacity:.6}
+.card.flash{outline:3px solid var(--accent);outline-offset:2px}
+.nodata{display:flex;flex-wrap:wrap;gap:6px}
+.nodata .chip{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+@media (max-width:480px){.mapinfo{height:11em}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BNI 파이오니어 챕터 · 121 매칭</div>
+    <h1>이번 주 누구와 121을 할까</h1>
+    <p class="lede">선샤인에 적힌 핵심고객과 상생업종으로, 서로 소개를 주고받을 근거가 있는 멤버부터 보여줍니다. 카드마다 점수의 근거와 그 관계에 맞춘 질문 2개가 붙어 있어요.</p>
+  </header>
+
+  <div class="picker">
+    <label for="who">나는</label>
+    <select id="who"></select>
+    <span class="note" id="whoNote"></span>
+  </div>
+
+  <section class="me" id="meBox"></section>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-rec" aria-selected="true">121 추천</button>
+    <button role="tab" id="tab-map" aria-selected="false">선샤인 지도</button>
+    <button role="tab" id="tab-data" aria-selected="false">데이터 점검</button>
+    <button role="tab" id="tab-how" aria-selected="false">점수 기준</button>
+  </div>
+
+  <section id="pane-rec" class="sect">
+    <div class="bar">
+      <div class="legend">
+        <span><i style="background:var(--mutual)"></i>서로 지목</span>
+        <span><i style="background:var(--give)"></i>한쪽 지목</span>
+        <span><i style="background:var(--cust)"></i>같은 고객군</span>
+      </div>
+      <label class="toggle"><input type="checkbox" id="hideDone"> 121 끝난 멤버 숨기기</label>
+    </div>
+    <div class="note" id="recNote" role="status"></div>
+    <div class="list" id="list"></div>
+    <div id="nolink"></div>
+  </section>
+
+  <section id="pane-map" class="sect" hidden>
+    <p class="note">안쪽 원은 고객군(크기 = 그 고객을 꼽은 멤버 수), 바깥 원은 멤버예요. 같은 고객을 만나는 멤버끼리 가깝게 놓았어요. <b>나</b>는 빨간 점이에요.</p>
+    <div class="maptools">
+      <label><input type="checkbox" id="lyG" checked> 고객군 선</label>
+      <label><input type="checkbox" id="lyS"> 멤버 간 상생선</label>
+      <label><input type="checkbox" id="lyE"> 빈 직군 (챕터에 없는 상생업종)</label>
+    </div>
+    <div class="mapinfo" id="mapInfo" aria-live="polite"></div>
+    <div class="mapbox" id="mapBox"></div>
+    <div class="mapleg"><span><i class="a"></i>나</span><span><i></i>멤버</span><span><i class="g"></i>고객군</span><span><i class="x"></i>빈 직군 (영입 후보)</span><span>진한 초록선 = 서로 지목 · 노란 화살표 = 한쪽 지목</span></div>
+    <div id="mapNoData" class="sect"></div>
+  </section>
+
+  <section id="pane-data" class="sect" hidden>
+    <h2>멤버별 데이터 상태</h2>
+    <p class="note">추천은 입력된 데이터만큼만 정확해요. 비어 있는 멤버는 121에서 고객과 상생업종을 함께 정리하면 바로 추천에 반영할 수 있어요.</p>
+    <div class="tablewrap"><table id="tblMembers"></table></div>
+    <h2 style="margin-top:12px">상생업종 연결표</h2>
+    <p class="note">멤버들이 꼽은 상생업종이 챕터 안의 누구로 연결되는지 보여줘요. 연결되는 멤버가 없는 업종은 영입 후보예요.</p>
+    <div class="tablewrap"><table id="tblSyn"></table></div>
+  </section>
+
+  <section id="pane-how" class="sect" hidden>
+    <div class="method">
+      <h2 style="margin-bottom:8px">점수는 이렇게 매겨요</h2>
+      <div class="tablewrap" style="border:0">
+      <table>
+        <tr><th>근거</th><th>점수</th><th>왜 이 점수인가</th></tr>
+        <tr><td>상대가 내 업종을 상생업종으로 꼽음</td><td>+5</td><td>상대가 이미 나를 소개할 상황을 알고 있다는 뜻이에요.</td></tr>
+        <tr><td>내가 상대 업종을 상생업종으로 꼽음</td><td>+5</td><td>내가 상대에게 줄 수 있는 고객이 있다는 뜻이에요.</td></tr>
+        <tr><td>둘 다 꼽음 (서로 지목)</td><td>+4 추가</td><td>주고받는 리퍼럴이 가장 빨리 생기는 관계라 가장 위에 올려요.</td></tr>
+        <tr><td>같은 고객군을 상대함</td><td>군마다 2~4</td><td>챕터에서 그 고객군을 상대하는 멤버가 적을수록 점수가 높아요(2명 이하 4점, 4명 이하 3점, 그 이상 2점). 모두가 상대하는 고객군은 구분력이 없기 때문이에요.</td></tr>
+      </table>
+      </div>
+      <p class="note" style="margin-top:10px">고객 표현이 사람마다 달라서(예: '개인·소상공인'과 '소기업 대표'), 비슷한 표현은 같은 고객군으로 묶어서 비교해요. 묶음 기준은 데이터 점검 탭에서 확인할 수 있어요. AI 호출 없이 규칙으로만 계산하기 때문에 같은 데이터면 항상 같은 결과가 나와요.</p>
+      <p class="note">데이터 출처: 파이오니아 선샤인 저장소의 멤버 시드(33명)와 챕터 명단 스프레드시트(서비스·타겟 고객 열), 김여련 대표 추가. 기준일 2026-10-13.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const fetch_all=()=>Promise.all(['members','groups','synergy-map'].map(n=>fetch('data/'+n+'.json').then(r=>{if(!r.ok)throw new Error(n+'.json '+r.status);return r.json()})));
+fetch_all().then(([MEMBERS,GROUPS,SYN])=>{
+
+// 고객 표현 → 고객군 묶음
+const RAW2G = {}; Object.entries(GROUPS).forEach(([g,arr])=>arr.forEach(r=>RAW2G[r]=g));
+
+
+const byName = Object.fromEntries(MEMBERS.map(m=>[m.n,m]));
+const groupsOf = m => [...new Set(m.c.map(r=>RAW2G[r]).filter(Boolean))];
+const GDF = {}; MEMBERS.forEach(m=>groupsOf(m).forEach(g=>GDF[g]=(GDF[g]||0)+1));
+const gPts = g => GDF[g]<=2?4:GDF[g]<=4?3:2;
+const wantsFrom = (a,b) => a.s.filter(s=>(SYN[s]||[]).includes(b.n));
+const rawFor = (m,g) => m.c.filter(r=>RAW2G[r]===g);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const hasData = m => m.c.length>0 || m.s.length>0;
+const svcOf = m => m.svc || m.f;
+// '이(가)' 같은 조사를 앞 글자 받침에 맞게 고르기
+function fixJosa(s){
+  return s.replace(/([\s\S])(['’)]?)(이\(가\)|을\(를\)|과\(와\))/g,(m,ch,q,j)=>{
+    const c=ch.charCodeAt(0); let bat;
+    if(c>=0xAC00&&c<=0xD7A3) bat=(c-0xAC00)%28!==0; else if(/[0-9a-zA-Z]/.test(ch)) bat=/[0136789lmnLMN]/.test(ch); else return m;
+    const pick={"이(가)":["이","가"],"을(를)":["을","를"],"과(와)":["과","와"]}[j];
+    return ch+q+(bat?pick[0]:pick[1]);
+  });
+}
+
+function score(me,o){
+  const iW = wantsFrom(me,o), tW = wantsFrom(o,me);
+  const shared = groupsOf(me).filter(g=>groupsOf(o).includes(g))
+    .sort((a,b)=>gPts(b)-gPts(a)).slice(0,3);
+  const p = {mutual: iW.length&&tW.length?4:0, give:(iW.length?5:0)+(tW.length?5:0), cust:shared.reduce((s,g)=>s+gPts(g),0)};
+  return {o,iW,tW,shared,p,total:p.mutual+p.give+p.cust};
+}
+
+function questions(me,r){
+  const {o,iW,tW,shared}=r, q=[];
+  if(iW.length&&tW.length){
+    q.push(`서로를 상생업종으로 꼽았어요. 최근 대표님 고객 중 ${me.f}이(가) 필요해 보였던 분이 있었나요? 그때 고객이 한 말은 무엇이었나요?`);
+    q.push(`'${svcOf(me)}'과(와) '${svcOf(o)}'을(를) 묶어서 같이 제안한다면, 어떤 고객에게 어떤 순간에 꺼낼 수 있을까요?`);
+  }
+  if(tW.length) q.push(`대표님이 상생업종으로 '${tW[0]}'을(를) 꼽으셨어요. 대표님 고객이 어떤 말을 할 때 저를 떠올리시면 될까요?`);
+  if(iW.length) q.push(`저는 '${iW[0]}'이(가) 필요한 고객을 자주 만나요. 제가 어떤 말을 들으면 대표님께 바로 연결하면 될까요?`);
+  shared.forEach(g=>{
+    q.push(`둘 다 '${g}' 고객을 만나요. 그 고객이 대표님을 처음 찾게 되는 계기는 무엇인가요?`);
+    q.push(`'${g}' 고객 중 대표님께 넘기면 좋은 신호와, 넘기면 안 되는 신호는 각각 무엇인가요?`);
+  });
+  if(!hasData(o)) q.push(`대표님 핵심 고객 2가지와 상생업종 3가지를 같이 정리해볼까요? 선샤인 데이터가 비어 있어서 추천에 반영되지 않고 있어요.`);
+  if(q.length<2) q.push(`대표님 고객이 '${o.f}'을(를) 찾기 직전에 주로 어떤 일을 겪나요? 그 순간을 제가 알아볼 수 있게 알려주세요.`);
+  return [...new Set(q)].map(fixJosa).slice(0,2);
+}
+
+// 121 완료 기록 (이 브라우저에만 저장)
+const KEY='p121-done';
+function loadDone(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return {}}}
+function saveDone(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+let DONE = loadDone();
+const pairKey=(a,b)=>a+'→'+b;
+
+const sel=document.getElementById('who');
+MEMBERS.slice().sort((a,b)=>a.n.localeCompare(b.n,'ko')).forEach(m=>{
+  const op=document.createElement('option'); op.value=m.n; op.textContent=`${m.n} · ${m.f}`; sel.appendChild(op);
+});
+let saved='송승훈'; try{saved=localStorage.getItem('p121-me')||saved}catch(e){}
+sel.value = byName[saved]?saved:'송승훈';
+
+function renderMe(me){
+  const gs=groupsOf(me);
+  document.getElementById('whoNote').textContent = me.co + (me.role?` · ${me.role}`:'');
+  document.getElementById('meBox').innerHTML = `
+    <div><div class="k">내 고객군 (비교에 쓰는 묶음)</div><div class="chips">${
+      gs.length?gs.map(g=>`<span class="chip c">${esc(g)} · ${GDF[g]}명</span>`).join(''):'<span class="chip miss">입력 필요</span>'}</div></div>
+    <div><div class="k">내가 꼽은 상생업종</div><div class="chips">${
+      me.s.length?me.s.map(s=>`<span class="chip ${SYN[s]?'s':''}">${esc(s)}${SYN[s]?' → '+esc(SYN[s].join(', ')):''}</span>`).join(''):'<span class="chip miss">입력 필요</span>'}</div></div>
+    ${me.w?`<div style="grid-column:1/-1"><div class="k">121에서 전달할 내 소개 신호</div><div class="oneliner">${esc(me.w)}</div></div>`:''}`;
+}
+
+function renderRec(){
+  const me=byName[sel.value]; renderMe(me);
+  const hide=document.getElementById('hideDone').checked;
+  const rows=MEMBERS.filter(o=>o.n!==me.n).map(o=>score(me,o));
+  const linked=rows.filter(r=>r.total>0).sort((a,b)=>b.total-a.total||b.shared.length-a.shared.length||a.o.n.localeCompare(b.o.n,'ko'));
+  const none=rows.filter(r=>r.total===0);
+  const max=Math.max(1,...linked.map(r=>r.total));
+  let rank=0;
+  const list=document.getElementById('list');
+  if(!hasData(me)){
+    list.innerHTML=`<div class="empty">${esc(me.n)} 대표님의 핵심고객과 상생업종이 비어 있어서 내 기준 추천을 만들 수 없어요. 아래는 대표님을 상생업종으로 꼽은 멤버예요.</div>`;
+  } else list.innerHTML='';
+  linked.forEach(r=>{
+    const done=!!DONE[pairKey(me.n,r.o.n)]; rank++;
+    if(hide&&done) return;
+    const tags=[]; const why=[];
+    if(r.p.mutual){tags.push('<span class="tag t-m">서로 지목</span>');}
+    if(r.tW.length){why.push(`상대가 상생업종으로 <b>${esc(r.tW.join(', '))}</b>${fixJosa(r.tW.join(', ').slice(-1)+'을(를)').slice(1)} 꼽음 → 나를 소개할 상황을 알고 있어요`); if(!r.p.mutual)tags.push('<span class="tag t-g">상대가 나를 지목</span>');}
+    if(r.iW.length){why.push(`내가 상생업종으로 <b>${esc(r.iW.join(', '))}</b>${fixJosa(r.iW.join(', ').slice(-1)+'을(를)').slice(1)} 꼽음 → 내가 줄 고객이 있어요`); if(!r.p.mutual)tags.push('<span class="tag t-g">내가 지목</span>');}
+    r.shared.forEach(g=>{
+      why.push(`같은 고객군 <b>${esc(g)}</b> (챕터에서 ${GDF[g]}명만 상대, +${gPts(g)}) · 내 표현 '${esc(rawFor(me,g).join(', '))}' / 상대 표현 '${esc(rawFor(r.o,g).join(', '))}'`);
+      if(GDF[g]<=2) tags.push(`<span class="tag t-c">희소 고객군</span>`);
+    });
+    if(r.o.who) why.push(`상대가 적은 타겟 고객: ${esc(r.o.who)}`);
+    if(!hasData(r.o)) tags.push('<span class="tag t-w">상대 데이터 비어 있음</span>');
+    const w=v=>(v/max*100).toFixed(1)+'%';
+    const qs=questions(me,r);
+    const card=document.createElement('article'); card.className='card'+(done?' done':''); card.dataset.n=r.o.n;
+    card.innerHTML=`<div class="rank">${String(rank).padStart(2,'0')}</div>
+      <div class="body">
+        <div class="head"><div><span class="name">${esc(r.o.n)} 대표</span> <span class="sub">${esc(r.o.co)} · ${esc(r.o.f)}</span></div>
+          <div class="score"><b>${r.total}</b>점</div></div>
+        <div class="meter" aria-hidden="true"><span style="width:${w(r.p.mutual)};background:var(--mutual)"></span><span style="width:${w(r.p.give)};background:var(--give)"></span><span style="width:${w(r.p.cust)};background:var(--cust)"></span></div>
+        ${tags.length?`<div class="tags">${[...new Set(tags)].join('')}</div>`:''}
+        <ul class="why">${why.map(x=>`<li>${x}</li>`).join('')}</ul>
+        <div class="q"><div class="k">121에서 물어볼 질문</div><ol>${qs.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>
+        <div class="foot"><button class="btn ${done?'on':''}" data-o="${esc(r.o.n)}">${done?'121 완료됨 · 취소':'121 완료로 표시'}</button></div>
+      </div>`;
+    list.appendChild(card);
+  });
+  const nl=document.getElementById('nolink');
+  nl.innerHTML = none.length?`<div class="empty"><b>연결 근거가 아직 없는 멤버 ${none.length}명</b><br>${none.map(r=>esc(r.o.n)+(hasData(r.o)?'':' (데이터 비어 있음)')).join(' · ')}<br><span class="note">고객군이나 상생업종이 겹치지 않거나 데이터가 비어 있는 경우예요. 121에서 서로의 고객을 알게 되면 연결이 생길 수 있어요.</span></div>`:'';
+}
+
+document.getElementById('list').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-o]'); if(!b) return;
+  const k=pairKey(sel.value,b.dataset.o);
+  if(DONE[k]) delete DONE[k]; else DONE[k]=new Date().toISOString().slice(0,10);
+  saveDone(DONE); renderRec();
+});
+sel.addEventListener('change',()=>{try{localStorage.setItem('p121-me',sel.value)}catch(e){} renderRec();});
+document.getElementById('hideDone').addEventListener('change',renderRec);
+
+function renderData(){
+  const rows=MEMBERS.slice().sort((a,b)=>(hasData(a)-hasData(b))||a.n.localeCompare(b.n,'ko'));
+  const wantedBy=n=>MEMBERS.filter(m=>m.s.some(s=>(SYN[s]||[]).includes(n))).length;
+  document.getElementById('tblMembers').innerHTML=`<tr><th>멤버</th><th>업종</th><th>고객 표현</th><th>상생업종</th><th>나를 꼽은 멤버</th><th>상태</th></tr>`+
+    rows.map(m=>`<tr><td>${esc(m.n)}</td><td>${esc(m.f)}</td><td>${m.c.length}</td><td>${m.s.length}</td><td>${wantedBy(m.n)}</td><td>${
+      hasData(m)?(m.c.some(r=>!RAW2G[r])?'<span class="tag t-w">묶음 확인</span>':'<span class="tag t-m">반영 중</span>'):'<span class="tag t-w">비어 있음</span>'}</td></tr>`).join('');
+  const cnt={}; MEMBERS.forEach(m=>m.s.forEach(s=>(cnt[s]=cnt[s]||[]).push(m.n)));
+  const syn=Object.entries(cnt).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],'ko'));
+  document.getElementById('tblSyn').innerHTML=`<tr><th>상생업종</th><th>꼽은 멤버 수</th><th>챕터 내 연결</th><th>꼽은 멤버</th></tr>`+
+    syn.map(([s,ns])=>`<tr><td>${esc(s)}</td><td>${ns.length}</td><td>${SYN[s]?'<span class="tag t-m">'+esc(SYN[s].join(', '))+'</span>':'<span class="tag t-w">챕터에 없음</span>'}</td><td class="note">${esc(ns.join(', '))}</td></tr>`).join('');
+}
+
+const tabs=['rec','map','data','how'];
+function showTab(t){
+  tabs.forEach(x=>{document.getElementById('tab-'+x).setAttribute('aria-selected',x===t);document.getElementById('pane-'+x).hidden=x!==t;});
+  if(t==='map') renderMap();
+}
+tabs.forEach(t=>document.getElementById('tab-'+t).addEventListener('click',()=>showTab(t)));
+
+renderRec(); renderData();
+
+/* ================= 선샤인 지도 (SVG + 순수 JS) ================= */
+const mapMembers = MEMBERS.filter(hasData);
+const mapEmpty = MEMBERS.filter(m=>!hasData(m));
+const MG = {C:400, RG:112, RM:300, RE:218};
+const TAU = Math.PI*2;
+const gList = Object.keys(GROUPS).filter(g=>GDF[g]);
+const emptyJobs = (()=>{ const o={}; mapMembers.forEach(m=>m.s.forEach(s=>{ if(!SYN[s]) (o[s]=o[s]||[]).push(m.n); })); return o; })();
+
+// 상생선: 꼽은 사람 → 그 업종을 하는 챕터 멤버 (지도에 있는 멤버끼리만)
+const onMap = new Set(mapMembers.map(m=>m.n));
+const synLinks = (()=>{
+  const dir = new Set();
+  mapMembers.forEach(a=>a.s.forEach(s=>(SYN[s]||[]).forEach(b=>{ if(b!==a.n && onMap.has(b)) dir.add(a.n+'→'+b); })));
+  const out=[], seen=new Set();
+  dir.forEach(k=>{ const [a,b]=k.split('→'); const id=[a,b].sort().join('|'); if(seen.has(id)) return; seen.add(id);
+    out.push({a,b,mutual:dir.has(b+'→'+a), dir: dir.has(a+'→'+b)?[a,b]:[b,a]}); });
+  return out;
+})();
+
+// --- 배치: 같은 고객군을 공유하는 멤버끼리 가깝게 (선 교차가 가장 적은 순서를 찾는다) ---
+function rng(seed){return ()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const cmean = angs => { let s=0,c=0; angs.forEach(a=>{s+=Math.sin(a);c+=Math.cos(a)}); return (Math.atan2(s,c)+TAU)%TAU; };
+const pt = (a,r)=>[r*Math.cos(a),r*Math.sin(a)];
+function crossings(gOrd,mOrd){
+  const ga={},ma={}; gOrd.forEach((g,i)=>ga[g]=i/gOrd.length*TAU); mOrd.forEach((m,i)=>ma[m.n]=i/mOrd.length*TAU);
+  const S=[]; mOrd.forEach(m=>groupsOf(m).forEach(g=>S.push({m:m.n,g,p:pt(ga[g],MG.RG),q:pt(ma[m.n],MG.RM)})));
+  const ccw=(a,b,c)=>(c[1]-a[1])*(b[0]-a[0])>(b[1]-a[1])*(c[0]-a[0]);
+  let n=0;
+  for(let i=0;i<S.length;i++)for(let j=i+1;j<S.length;j++){
+    if(S[i].m===S[j].m||S[i].g===S[j].g) continue;
+    const A=S[i],B=S[j];
+    if(ccw(A.p,B.p,B.q)!==ccw(A.q,B.p,B.q) && ccw(A.p,A.q,B.p)!==ccw(A.p,A.q,B.q)) n++;
+  }
+  return n;
+}
+const LAYOUT = (()=>{
+  const rnd=rng(121); let best=null;
+  for(let t=0;t<150;t++){
+    let gOrd=gList.slice().sort(()=>rnd()-.5), mOrd=mapMembers.slice();
+    for(let it=0;it<8;it++){
+      const ga={}; gOrd.forEach((g,i)=>ga[g]=i/gOrd.length*TAU);
+      mOrd=mOrd.map(m=>({m,a:cmean(groupsOf(m).map(g=>ga[g]))})).sort((x,y)=>x.a-y.a).map(x=>x.m);
+      const ma={}; mOrd.forEach((m,i)=>ma[m.n]=i/mOrd.length*TAU);
+      gOrd=gOrd.map(g=>({g,a:cmean(mOrd.filter(m=>groupsOf(m).includes(g)).map(m=>ma[m.n]))})).sort((x,y)=>x.a-y.a).map(x=>x.g);
+    }
+    for(let k=0;k<gOrd.length;k++){
+      const rot=gOrd.slice(k).concat(gOrd.slice(0,k)), c=crossings(rot,mOrd);
+      if(!best||c<best.c) best={c,g:rot,m:mOrd};
+    }
+  }
+  const ga={},ma={};
+  best.g.forEach((g,i)=>ga[g]=i/best.g.length*TAU-Math.PI/2);
+  best.m.forEach((m,i)=>ma[m.n]=i/best.m.length*TAU-Math.PI/2);
+  return {gOrd:best.g,mOrd:best.m,ga,ma,cross:best.c};
+})();
+
+// 빈 직군 점: 그 업종을 꼽은 멤버들의 중심 근처에 놓고, 서로 겹치지 않게 밀어낸다
+function layoutEmpty(){
+  const items=Object.entries(emptyJobs).map(([k,v])=>{
+    let x=0,y=0; v.forEach(n=>{const p=pt(LAYOUT.ma[n],MG.RM);x+=p[0]/v.length;y+=p[1]/v.length;});
+    const d=Math.hypot(x,y)||1, r=Math.min(245,Math.max(165,d)); x*=r/d; y*=r/d;
+    return {k,v,tx:x,ty:y,x,y,r:3.5+2.6*Math.sqrt(v.length)};
+  });
+  for(let it=0;it<400;it++){
+    for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+      const a=items[i],b=items[j]; let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+      const min=a.r+b.r+3; if(d>=min) continue;
+      if(d<0.01){dx=Math.cos(i);dy=Math.sin(i);d=1}
+      const f=(min-d)/2/d; a.x-=dx*f;a.y-=dy*f;b.x+=dx*f;b.y+=dy*f;
+    }
+    items.forEach(a=>{ a.x+=(a.tx-a.x)*.04; a.y+=(a.ty-a.y)*.04;
+      const d=Math.hypot(a.x,a.y), c=Math.min(250,Math.max(160,d)); a.x*=c/d; a.y*=c/d; });
+  }
+  return items;
+}
+const EMPTY_ITEMS = layoutEmpty();
+
+// --- 그리기 ---
+const tw = (s,fs)=>[...s].reduce((w,ch)=>w+(ch.charCodeAt(0)>0x2E80?1:.58),0)*fs;
+function fit(name,suffix,fs,max){
+  let n=name; while(n.length>1 && tw(n+suffix,fs)>max) n=n.slice(0,-1).trimEnd();
+  return n===name?name+suffix:n+'…'+suffix;
+}
+function radial(theta,r0,txt,fs,cls){
+  const deg=theta*180/Math.PI, flip=Math.cos(theta)<-0.0001;
+  return `<g transform="translate(${MG.C} ${MG.C}) rotate(${(flip?deg+180:deg).toFixed(2)})"><text class="${cls}" x="${flip?-r0:r0}" y="${(fs*.35).toFixed(1)}" font-size="${fs.toFixed(1)}" text-anchor="${flip?'end':'start'}">${esc(txt)}</text></g>`;
+}
+let mapFocus=null, mapPin=null, lastPtr='mouse', mapBucket='';
+const mapEl=document.getElementById('mapBox'), infoEl=document.getElementById('mapInfo');
+const mapOn = () => !document.getElementById('pane-map').hidden;
+
+function renderMap(){
+  const me=byName[sel.value], W=Math.max(280,mapEl.clientWidth||800), s=Math.min(1.1,(W-8)/800);
+  const fsM=Math.max(13,10.5/s), fsG=Math.max(12,8.8/s), fsE=Math.max(11,8.5/s);
+  mapBucket=[fsM|0,fsG|0].join();
+  const {C,RG,RM}=MG, X=(a,r)=>(C+r*Math.cos(a)).toFixed(1), Y=(a,r)=>(C+r*Math.sin(a)).toFixed(1);
+  let h=`<svg id="mapSvg" viewBox="0 0 800 800" class="hide-s hide-e" role="group" aria-label="선샤인 지도: 안쪽 원은 고객군, 바깥 원은 멤버">
+   <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="arrow" d="M0 0L10 5L0 10z"/></marker></defs>
+   <rect id="mapBg" x="0" y="0" width="800" height="800" fill="transparent"/>`;
+  // 선
+  mapMembers.forEach(m=>groupsOf(m).forEach(g=>{
+    h+=`<line class="e eg" data-m="${esc(m.n)}" data-g="${esc(g)}" x1="${X(LAYOUT.ga[g],RG)}" y1="${Y(LAYOUT.ga[g],RG)}" x2="${X(LAYOUT.ma[m.n],RM)}" y2="${Y(LAYOUT.ma[m.n],RM)}"/>`; }));
+  synLinks.forEach(l=>{
+    const [p,q]=l.dir, a=LAYOUT.ma[p], b=LAYOUT.ma[q];
+    const P=pt(a,RM-10), Q=pt(b,RM-10), mid=[(P[0]+Q[0])/2,(P[1]+Q[1])/2], K=[mid[0]*.3,mid[1]*.3];
+    const sh=(from,to,d)=>{const dx=to[0]-from[0],dy=to[1]-from[1],n=Math.hypot(dx,dy)||1;return [from[0]+dx/n*d,from[1]+dy/n*d]};
+    const Q2=l.mutual?Q:sh(Q,K,8);
+    h+=`<path class="e es${l.mutual?' mut':''}" data-a="${esc(p)}" data-b="${esc(q)}" d="M${(C+P[0]).toFixed(1)} ${(C+P[1]).toFixed(1)} Q${(C+K[0]).toFixed(1)} ${(C+K[1]).toFixed(1)} ${(C+Q2[0]).toFixed(1)} ${(C+Q2[1]).toFixed(1)}"${l.mutual?'':' marker-end="url(#ah)"'}/>`; });
+  EMPTY_ITEMS.forEach(it=>it.v.forEach(n=>{
+    const a=LAYOUT.ma[n], p=pt(a,RM);
+    h+=`<line class="e ee" data-m="${esc(n)}" data-e="${esc(it.k)}" x1="${(C+p[0]).toFixed(1)}" y1="${(C+p[1]).toFixed(1)}" x2="${(C+it.x).toFixed(1)}" y2="${(C+it.y).toFixed(1)}"/>`; }));
+  // 빈 직군 점
+  const lblMin = s<0.7?3:2;
+  EMPTY_ITEMS.forEach(it=>{
+    const right=it.x>=0, cnt=it.v.length;
+    h+=`<g class="n en${cnt>=lblMin?' lbl':''}" data-k="e" data-id="${esc(it.k)}" tabindex="0" role="button" aria-label="빈 직군 ${esc(it.k)}, ${cnt}명이 꼽음">
+      <circle class="hit" cx="${(C+it.x).toFixed(1)}" cy="${(C+it.y).toFixed(1)}" r="${Math.max(it.r+5,12)}"/><circle class="dot" cx="${(C+it.x).toFixed(1)}" cy="${(C+it.y).toFixed(1)}" r="${it.r.toFixed(1)}"/><circle class="ring" cx="${(C+it.x).toFixed(1)}" cy="${(C+it.y).toFixed(1)}" r="${(it.r+4).toFixed(1)}"/>
+      <text x="${(C+it.x+(right?1:-1)*(it.r+4)).toFixed(1)}" y="${(C+it.y+fsE*.35).toFixed(1)}" font-size="${fsE.toFixed(1)}" text-anchor="${right?'start':'end'}">${esc(it.k)} ${cnt}</text></g>`; });
+  // 고객군 (안쪽 원)
+  LAYOUT.gOrd.forEach(g=>{
+    const a=LAYOUT.ga[g], r=7+4.2*Math.sqrt(GDF[g]), r0=RG+r+6;
+    h+=`<g class="n gn" data-k="g" data-id="${esc(g)}" tabindex="0" role="button" aria-label="고객군 ${esc(g)}, 멤버 ${GDF[g]}명">
+      <circle class="hit" cx="${X(a,RG)}" cy="${Y(a,RG)}" r="${Math.max(r+6,16)}"/><circle class="dot" cx="${X(a,RG)}" cy="${Y(a,RG)}" r="${r.toFixed(1)}"/><circle class="ring" cx="${X(a,RG)}" cy="${Y(a,RG)}" r="${(r+4).toFixed(1)}"/>
+      ${radial(a,r0,fit(g,' '+GDF[g],fsG,RM-14-r0),fsG,'')}</g>`; });
+  // 멤버 (바깥 원)
+  mapMembers.forEach(m=>{
+    const a=LAYOUT.ma[m.n], isMe=m.n===me.n;
+    h+=`<g class="n mn${isMe?' me':''}" data-k="m" data-id="${esc(m.n)}" tabindex="0" role="button" aria-label="${esc(m.n)} 대표, ${esc(m.f)}${isMe?' (나)':''}">
+      <circle class="hit" cx="${X(a,RM)}" cy="${Y(a,RM)}" r="15"/><circle class="dot" cx="${X(a,RM)}" cy="${Y(a,RM)}" r="${isMe?8.5:6}"/><circle class="ring" cx="${X(a,RM)}" cy="${Y(a,RM)}" r="11"/>
+      ${radial(a,RM+14,m.n,fsM,'')}</g>`; });
+  h+='</svg>';
+  mapEl.innerHTML=h;
+  syncLayers();
+  applyFocus(mapPin||mapFocus);
+  // 데이터 없는 멤버
+  const wantedBy=n=>MEMBERS.filter(x=>x.s.some(s=>(SYN[s]||[]).includes(n))).length;
+  document.getElementById('mapNoData').innerHTML = mapEmpty.length ? `<h2>데이터 없음 · ${mapEmpty.length}명</h2>
+    <p class="note">121에서 고객과 상생업종을 정리해주세요. 이 멤버들은 지도에 점이 없지만, 다른 멤버가 상생업종으로 꼽은 횟수는 아래에 적었어요.</p>
+    <div class="nodata">${mapEmpty.map(m=>`<span class="chip">${esc(m.n)} · ${esc(m.f)} · 나를 꼽은 멤버 ${wantedBy(m.n)}명</span>`).join('')}</div>` : '';
+}
+
+function syncLayers(){
+  const svg=document.getElementById('mapSvg'); if(!svg) return;
+  svg.classList.toggle('hide-g',!document.getElementById('lyG').checked);
+  svg.classList.toggle('hide-s',!document.getElementById('lyS').checked);
+  svg.classList.toggle('hide-e',!document.getElementById('lyE').checked);
+}
+
+const names = a => a.map(esc).join(', ');
+function applyFocus(f){
+  const svg=document.getElementById('mapSvg'); if(!svg) return;
+  mapFocus=f; svg.classList.toggle('focus',!!f);
+  svg.querySelectorAll('.on').forEach(e=>e.classList.remove('on'));
+  const nodes={m:{},g:{},e:{}}; svg.querySelectorAll('[data-k]').forEach(e=>nodes[e.dataset.k][e.dataset.id]=e);
+  const on=e=>e&&e.classList.add('on');
+  const showS=document.getElementById('lyS').checked, showE=document.getElementById('lyE').checked;
+  if(!f){ infoEl.innerHTML='<span class="note">고객군·멤버·회색 점에 마우스를 올리거나 탭하면 연결된 것만 남아요. 빈 곳을 탭하면 해제돼요.</span>'; return; }
+  let html='';
+  if(f.k==='g'){
+    const ms=mapMembers.filter(m=>groupsOf(m).includes(f.id)).map(m=>m.n);
+    on(nodes.g[f.id]); ms.forEach(n=>on(nodes.m[n]));
+    svg.querySelectorAll('.eg').forEach(e=>{ if(e.dataset.g===f.id) on(e); });
+    html=`<b>'${esc(f.id)}'</b> 고객을 꼽은 멤버 ${ms.length}명: ${names(ms)}`;
+  } else if(f.k==='e'){
+    const ms=emptyJobs[f.id]||[];
+    on(nodes.e[f.id]); ms.forEach(n=>on(nodes.m[n]));
+    svg.querySelectorAll('.ee').forEach(e=>{ if(e.dataset.e===f.id) on(e); });
+    html=`<b>'${esc(f.id)}'</b> 상생업종을 꼽은 멤버 ${ms.length}명: ${names(ms)}<br><span class="note">챕터에 이 일을 하는 멤버가 없어요 → 영입 후보</span>`;
+  } else {
+    const m=byName[f.id], gs=groupsOf(m);
+    on(nodes.m[m.n]); gs.forEach(g=>on(nodes.g[g]));
+    svg.querySelectorAll('.eg').forEach(e=>{ if(e.dataset.m===m.n) on(e); });
+    const out=[],inn=[];
+    svg.querySelectorAll('.es').forEach(e=>{ const a=e.dataset.a,b=e.dataset.b;
+      if(a===m.n||b===m.n){ const o=a===m.n?b:a; (a===m.n?out:inn).push(o); if(showS){on(e);on(nodes.m[o]);} } });
+    const em=m.s.filter(x=>!SYN[x]);
+    svg.querySelectorAll('.ee').forEach(e=>{ if(e.dataset.m===m.n && showE){ on(e); on(nodes.e[e.dataset.e]); } });
+    html=`<b>${esc(m.n)}</b> 대표 · ${esc(m.co)} · ${esc(m.f)}${m.n===sel.value?' <span class="chip c">나</span>':''}<br>`+
+      `고객군: ${gs.length?names(gs):'없음'}<br>`+
+      `상생 연결: 내가 꼽음 → ${out.length?names(out):'없음'} / 나를 꼽음 ← ${inn.length?names(inn):'없음'}`+
+      (em.length?`<br>챕터에 없는 상생업종: ${names(em)}`:'');
+    if(mapPin&&mapPin.k==='m') html+=`<div class="act"><button class="btn" data-act="go" ${m.n===sel.value?'disabled':''}>121 추천에서 보기</button><button class="btn" data-act="me" ${m.n===sel.value?'disabled':''}>'나는'으로 선택</button></div>`;
+  }
+  infoEl.innerHTML=html;
+}
+
+function openMember(n){
+  const note=document.getElementById('recNote');
+  if(n===sel.value){ applyFocus({k:'m',id:n}); return; }
+  showTab('rec');
+  const card=[...document.querySelectorAll('#list .card')].find(c=>c.dataset.n===n);
+  if(card){
+    note.textContent='';
+    card.scrollIntoView({block:'center'}); card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),2400);
+  } else {
+    const why = DONE[pairKey(sel.value,n)] ? '121 완료로 표시해서 숨겨져 있어요 (위 체크를 풀면 보여요).' : hasData(byName[n])||hasData(byName[sel.value]) ? '지금은 서로 연결되는 근거(상생업종·같은 고객군)가 없어요.' : '데이터가 비어 있어 추천을 만들 수 없어요.';
+    note.textContent=`${n} 대표는 내 추천 목록에 카드가 없어요. ${why}`;
+    window.scrollTo({top:0});
+  }
+}
+function setMe(n){ sel.value=n; sel.dispatchEvent(new Event('change')); }
+
+const svgHost=mapEl;
+svgHost.addEventListener('pointerdown',e=>{lastPtr=e.pointerType||'mouse'});
+svgHost.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ lastPtr='mouse'; const t=e.target.closest('[data-k]'); if(t){e.preventDefault(); t.dispatchEvent(new MouseEvent('click',{bubbles:true}));} } });
+svgHost.addEventListener('pointerover',e=>{ if(e.pointerType!=='mouse'||mapPin) return; const t=e.target.closest('[data-k]'); if(t) applyFocus({k:t.dataset.k,id:t.dataset.id}); });
+svgHost.addEventListener('pointerout',e=>{ if(e.pointerType!=='mouse'||mapPin) return; const t=e.target.closest('[data-k]'); if(t&&!t.contains(e.relatedTarget)) applyFocus(null); });
+svgHost.addEventListener('focusin',e=>{ if(mapPin) return; const t=e.target.closest&&e.target.closest('[data-k]'); if(t) applyFocus({k:t.dataset.k,id:t.dataset.id}); });
+svgHost.addEventListener('click',e=>{
+  const t=e.target.closest('[data-k]');
+  if(!t){ mapPin=null; applyFocus(null); return; }
+  const f={k:t.dataset.k,id:t.dataset.id};
+  if(f.k==='m' && lastPtr==='mouse'){ openMember(f.id); return; }   // PC: 클릭 = 이동
+  mapPin = (mapPin&&mapPin.k===f.k&&mapPin.id===f.id)?null:f;       // 휴대폰(탭) · 군/직군 클릭 = 고정
+  applyFocus(mapPin);
+});
+infoEl.addEventListener('click',e=>{
+  const b=e.target.closest('button[data-act]'); if(!b||!mapPin) return;
+  const n=mapPin.id; if(b.dataset.act==='go') openMember(n); else { setMe(n); mapPin=null; }
+});
+['lyG','lyS','lyE'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{syncLayers();applyFocus(mapPin||mapFocus);}));
+sel.addEventListener('change',()=>{ if(mapOn()) renderMap(); });
+let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(!mapOn()) return; const W=Math.max(280,mapEl.clientWidth||800), s=Math.min(1.1,(W-8)/800);
+  const b=[(Math.max(13,10.5/s))|0,(Math.max(12,8.8/s))|0].join(); if(b!==mapBucket) renderMap(); },150); });
+
+}).catch(err=>{
+  document.querySelector('.wrap').insertAdjacentHTML('afterbegin','<div class="empty"><b>데이터를 불러오지 못했어요.</b><br>data 폴더의 JSON 3개가 같은 위치에 있는지 확인하고, 파일을 더블클릭하지 말고 웹주소(GitHub Pages)나 로컬 서버로 열어주세요.<br><span class="note">'+String(err)+'</span></div>');
+});
+</script>
+</body>
+</html>
