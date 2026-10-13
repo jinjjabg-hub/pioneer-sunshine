@@ -14,6 +14,7 @@
   --green:#2f9e68; --green-soft:#d9f0e3; --violet:#6457df; --violet-soft:#ebe9fc;
   --red:#e2534a; --orange:#ef8a3a; --gray:#9aa1aa; --gray-soft:#e6e8ec;
   --amber:#9a6a12; --amber-soft:#f5ead2; --warn:#8a5a00; --warn-soft:#fbefd2; --on:#ffffff;
+  --c0:#3d6fc4; --c1:#6457df; --c2:#b07a12; --c3:#d0612a; --c4:#c2477f; --c5:#1d8aa0;
   --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,monospace;
 }
@@ -21,12 +22,12 @@
   --bg:#121614; --panel:#1a201d; --nav:#1f2c22; --ink:#e6ebe7; --muted:#9ba69f; --line:#2c3530; --tint:#161c19;
   --green:#4cc38a; --green-soft:#1d3a2b; --violet:#9a90f2; --violet-soft:#29264a;
   --red:#f07068; --orange:#f39c55; --gray:#7d848d; --gray-soft:#2b3036;
-  --amber:#e0b25a; --amber-soft:#3a2f1a; --warn:#e8b44c; --warn-soft:#3a2f17; --on:#101412; color-scheme:dark}}
+  --amber:#e0b25a; --amber-soft:#3a2f1a; --warn:#e8b44c; --warn-soft:#3a2f17; --on:#101412; --c0:#7ea6ec; --c1:#9a90f2; --c2:#e0b25a; --c3:#f0935f; --c4:#ec86b5; --c5:#5ec4d6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#121614; --panel:#1a201d; --nav:#1f2c22; --ink:#e6ebe7; --muted:#9ba69f; --line:#2c3530; --tint:#161c19;
   --green:#4cc38a; --green-soft:#1d3a2b; --violet:#9a90f2; --violet-soft:#29264a;
   --red:#f07068; --orange:#f39c55; --gray:#7d848d; --gray-soft:#2b3036;
-  --amber:#e0b25a; --amber-soft:#3a2f1a; --warn:#e8b44c; --warn-soft:#3a2f17; --on:#101412; color-scheme:dark}
+  --amber:#e0b25a; --amber-soft:#3a2f1a; --warn:#e8b44c; --warn-soft:#3a2f17; --on:#101412; --c0:#7ea6ec; --c1:#9a90f2; --c2:#e0b25a; --c3:#f0935f; --c4:#ec86b5; --c5:#5ec4d6; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;padding-inline:16px;padding-block:20px 48px}
@@ -88,6 +89,11 @@ button,select,input{font:inherit;color:inherit}
 .gn .b{fill:var(--green);fill-opacity:.82;stroke:var(--green);stroke-width:1.5}
 .gn text{font-weight:700}
 .mn .b{fill:var(--violet)}
+.mn.c0 .b{fill:var(--c0)} .mn.c1 .b{fill:var(--c1)} .mn.c2 .b{fill:var(--c2)} .mn.c3 .b{fill:var(--c3)} .mn.c4 .b{fill:var(--c4)} .mn.c5 .b{fill:var(--c5)} 
+.cat0{--cc:var(--c0)} .cat1{--cc:var(--c1)} .cat2{--cc:var(--c2)} .cat3{--cc:var(--c3)} .cat4{--cc:var(--c4)} .cat5{--cc:var(--c5)} 
+.mcard.cat{background:color-mix(in srgb,var(--cc) 13%,var(--panel))}
+.mcard.cat.none{background:var(--tint);border:1px dashed color-mix(in srgb,var(--cc) 45%,var(--line))}
+.cathead{font-size:13px;font-weight:700;color:var(--cc);margin:6px 0 -2px}
 .mn.me .b{fill:var(--red)}
 .mn.me text{fill:var(--red);font-weight:700}
 .en .b{fill:var(--gray);fill-opacity:.55;stroke:var(--gray);stroke-dasharray:3 2}
@@ -209,8 +215,9 @@ tr:last-child td{border-bottom:0}
       <label><input type="checkbox" id="lyS"> 멤버 간 상생선</label>
       <label><input type="checkbox" id="lyE"> 빈 직군</label>
       <button class="btn" id="allBtn">전체 보기</button>
-      <div class="legend" style="margin-left:auto"><span><i class="dot d-g"></i>핵심고객군</span><span><i class="dot d-r"></i>나</span><span><i class="dot d-v"></i>멤버</span><span><i class="dot d-x"></i>빈 직군</span></div>
+      <div class="legend" style="margin-left:auto"><span><i class="dot d-g"></i>핵심고객군</span><span><i class="dot d-r"></i>나</span><span><i class="dot d-v"></i>멤버(카테고리별 색)</span><span><i class="dot d-x"></i>빈 직군</span></div>
     </div>
+    <div class="legend" id="catLegend"></div>
     <div class="info" id="mapInfo" aria-live="polite"></div>
     <div class="mapbox" id="mapBox"></div>
     <div id="mapNoData"></div>
@@ -263,7 +270,7 @@ tr:last-child td{border-bottom:0}
   <main class="page" id="pane-members" hidden>
     <div class="head">
       <h1>멤버</h1>
-      <p class="note" style="margin:0">멤버를 누르면 그 대표의 선샤인을 볼 수 있어요. 카테고리는 정해지면 묶어서 보여드릴게요.</p>
+      <p class="note" style="margin:0">카테고리별 명단이에요. 멤버를 누르면 그 대표의 선샤인을 볼 수 있어요.</p>
       <div class="chips" id="memChips"></div>
     </div>
     <div class="mgrid" id="memGrid"></div>
@@ -308,13 +315,14 @@ tr:last-child td{border-bottom:0}
 </div>
 
 <script>
-const fetch_all=()=>Promise.all(['members','groups','synergy-map','partner-groups'].map(n=>fetch('data/'+n+'.json').then(r=>{if(!r.ok)throw new Error(n+'.json '+r.status);return r.json()})));
-fetch_all().then(([MEMBERS,GROUPS,SYN,PG])=>boot(MEMBERS,GROUPS,SYN,PG)).catch(err=>{
+const fetch_all=()=>Promise.all(['members','groups','synergy-map','partner-groups'].map(n=>fetch('data/'+n+'.json').then(r=>{if(!r.ok)throw new Error(n+'.json '+r.status);return r.json()})))
+  .then(d=>fetch('data/categories.json').then(r=>r.ok?r.json():null).catch(()=>null).then(c=>[...d,c]));   // 카테고리는 없어도 동작
+fetch_all().then(([MEMBERS,GROUPS,SYN,PG,CAT])=>boot(MEMBERS,GROUPS,SYN,PG,CAT)).catch(err=>{
   document.querySelector('.shell').insertAdjacentHTML('afterbegin','<div class="empty" style="margin:20px"><b>데이터를 불러오지 못했어요.</b><br>data 폴더의 JSON 4개가 같은 위치에 있는지 확인하고, 파일을 더블클릭하지 말고 웹주소나 로컬 서버로 열어주세요.<br><span class="note">'+String(err)+'</span></div>');
   console.error(err);
 });
 
-function boot(MEMBERS,GROUPS,SYN,PG){
+function boot(MEMBERS,GROUPS,SYN,PG,CAT){
 /* ===== v1 계산 로직 (그대로) ===== */
 const RAW2G = {}; Object.entries(GROUPS).forEach(([g,arr])=>arr.forEach(r=>RAW2G[r]=g));
 const byName = Object.fromEntries(MEMBERS.map(m=>[m.n,m]));
@@ -387,6 +395,9 @@ const synLinks=(()=>{ const dir=new Set();
   dir.forEach(k=>{ const [a,b]=k.split('→'), id=[a,b].sort().join('|'); if(seen.has(id)) return; seen.add(id);
     out.push({a,b,mutual:dir.has(b+'→'+a),dir:dir.has(a+'→'+b)?[a,b]:[b,a]}); });
   return out; })();
+const CATS = CAT?Object.keys(CAT.categories):[];
+const CATOF = {}; CATS.forEach((c,i)=>CAT.categories[c].forEach(n=>CATOF[n]=i));
+const CHECK = new Set(CAT&&CAT.check||[]);
 const membersIn = g => mapMembers.filter(m=>groupsOf(m).includes(g));
 const tw=(s,fs)=>[...s].reduce((w,ch)=>w+(ch.charCodeAt(0)>0x2E80?1:.58),0)*fs;
 const cut=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s;
@@ -522,7 +533,7 @@ function renderMap(){
       <text x="${f1(x+(right?1:-1)*(it.r+4))}" y="${f1(y+fsE*.35)}" font-size="${f1(fsE)}" text-anchor="${right?'start':'end'}">${esc(it.k)} ${c}</text></g>`; });
   // 멤버 (바깥 원, 이름은 점 아래)
   mapMembers.forEach(m=>{ const [px,py]=MP(m.n), x=C+px, y=C+py, isMe=m.n===me.n, r=isMe?10:7.5;
-    h+=`<g class="n mn${isMe?' me':''}" data-k="m" data-id="${esc(m.n)}" tabindex="0" role="button" aria-label="${esc(m.n)} 대표, ${esc(m.f)}${isMe?' (나)':''}">
+    h+=`<g class="n mn${isMe?' me':''}${CATOF[m.n]!=null?' c'+CATOF[m.n]:''}" data-k="m" data-id="${esc(m.n)}" tabindex="0" role="button" aria-label="${esc(m.n)} 대표, ${esc(m.f)}${isMe?' (나)':''}">
       <circle class="hit" cx="${f1(x)}" cy="${f1(y)}" r="16"/><circle class="b" cx="${f1(x)}" cy="${f1(y)}" r="${r}"/><circle class="ring" cx="${f1(x)}" cy="${f1(y)}" r="${r+4}"/>
       <text x="${f1(x)}" y="${f1(y+r+fsM*1.05)}" font-size="${f1(fsM)}" text-anchor="middle">${esc(m.n)}</text></g>`; });
   $('mapBox').innerHTML=h+'</svg>';
@@ -592,6 +603,8 @@ $('gSel').addEventListener('change',e=>{ mapPin=e.target.value?{k:'g',id:e.targe
 $('allBtn').addEventListener('click',()=>{ mapPin=null; applyFocus(null); });
 ['lyS','lyE'].forEach(id=>$(id).addEventListener('change',()=>{ syncLayers(); applyFocus(mapPin||mapFocus); }));
 let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(cur!=='mega') return; const s=mapScale(); if([Math.max(13,10.5/s)|0,Math.max(12.5,9/s)|0].join()!==mapBucket) renderMap(); },150); });
+
+$('catLegend').innerHTML=CATS.map((c,i)=>`<span><i class="dot" style="background:var(--c${i})"></i>${esc(c)}</span>`).join('')+(CAT&&CAT.draft?'<span>· 카테고리는 초안이에요</span>':'');
 
 /* 메가 아래 패널 */
 function teamOf(g){
@@ -720,10 +733,16 @@ function renderTeam(){
 
 /* ================= 멤버 ================= */
 function renderMembers(){
-  $('memChips').innerHTML=`<span class="chip">${MEMBERS.length}명</span><span class="chip">데이터 입력 ${mapMembers.length}</span><span class="chip miss">미입력 ${mapEmpty.length}</span>`;
-  $('memGrid').innerHTML=MEMBERS.slice().sort((a,b)=>a.n.localeCompare(b.n,'ko')).map(m=>`<button class="mcard${hasData(m)?'':' none'}" data-mem="${esc(m.n)}">
+  $('memChips').innerHTML=`<span class="chip">${MEMBERS.length}명</span><span class="chip">데이터 입력 ${mapMembers.length}</span><span class="chip miss">미입력 ${mapEmpty.length}</span>`+(CAT&&CAT.draft?`<span class="chip miss">카테고리 초안 · 확인 필요 ${CHECK.size}명</span>`:'');
+  const card=m=>{ const i=CATOF[m.n]; return `<button class="mcard${i!=null?' cat cat'+i:''}${hasData(m)?'':' none'}" data-mem="${esc(m.n)}">
     <span style="min-width:0"><b>${esc(m.n)}</b> <span class="co">${esc(m.co)}</span><br><span class="f">${esc(m.f)}</span></span>
-    <span class="tag ${hasData(m)?'t-m':'t-x'}">${hasData(m)?'입력 완료':'미입력'}</span></button>`).join('');
+    <span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${CHECK.has(m.n)?'<span class="tag t-w">분류 확인</span>':''}<span class="tag ${hasData(m)?'t-m':'t-x'}">${hasData(m)?'입력 완료':'미입력'}</span></span></button>`; };
+  const byN=(a,b)=>a.n.localeCompare(b.n,'ko');
+  const rest=MEMBERS.filter(m=>CATOF[m.n]==null).sort(byN);
+  $('memGrid').innerHTML=(CAT&&CAT.draft?`<div class="empty" style="grid-column:1/-1">카테고리는 업종 열을 보고 나눈 <b>초안</b>이에요. '분류 확인'이 붙은 멤버는 어디에 넣을지 애매했어요. <span class="note">data/categories.json에서 고칠 수 있어요.</span></div>`:'')+
+    CATS.map((c,i)=>{ const ms=CAT.categories[c].map(n=>byName[n]).filter(Boolean).sort(byN);
+      return `<div class="cathead cat${i}" style="grid-column:1/-1">${esc(c)} · ${ms.length}</div>`+ms.map(card).join(''); }).join('')+
+    (rest.length?`<div class="cathead" style="grid-column:1/-1;color:var(--muted)">미분류 · ${rest.length}</div>`+rest.map(card).join(''):'');
 }
 $('memGrid').addEventListener('click',e=>{ const b=e.target.closest('[data-mem]'); if(!b) return; mineWho=b.dataset.mem; showTab('mine'); window.scrollTo({top:0}); });
 
