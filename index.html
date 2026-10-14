@@ -412,7 +412,7 @@ const clipList = (v,k,n) => Array.isArray(v) ? v.filter(x=>typeof x==='string'&&
 function cleanMember(m){ m=m||{}; return {n:clip(m.n,40).trim(),co:clip(m.co,80),f:clip(m.f,80),role:clip(m.role,60),c:clipList(m.c,20,60),s:clipList(m.s,30,60),w:clip(m.w,2000),svc:clip(m.svc,300),who:clip(m.who,600)}; }
 const STORE={mode:'loading',db:null,sample:null,edits:{},docs:[],
   async init(){
-    const use=n=>window.claude&&window.claude.use?Promise.race([window.claude.use(n).catch(()=>null),new Promise(r=>setTimeout(()=>r(null),8000))]):Promise.resolve(null);
+    const use=n=>window.claude&&window.claude.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);   // 뷰어가 없으면 use()가 스스로 null을 준다
     const [db,sample]=await Promise.all([use('db'),use('sample')]);
     this.sample=sample;
     if(db){
@@ -549,7 +549,7 @@ document.addEventListener('click',e=>{ const g=e.target.closest('[data-go]'); if
 window.addEventListener('resize',()=>APP.resize&&APP.resize());
 APP.restart=tab=>{ const t=tab||(APP.cur&&APP.cur()); SHELL.innerHTML=SHELL_HTML; boot(...mergeData(BASE),t); };
 fetch_all().then(d=>{ BASE=d; boot(...mergeData(BASE));
-  STORE.init().then(()=>{ if(Object.keys(STORE.edits).length) APP.restart(); else APP.refresh&&APP.refresh(); });
+  STORE.init().then(()=>{ if(Object.keys(STORE.edits).length) APP.restart(); else { APP.refresh&&APP.refresh(); APP.chips&&APP.chips(); } });
 }).catch(err=>{
   document.querySelector('.shell').insertAdjacentHTML('afterbegin','<div class="empty" style="margin:20px"><b>데이터를 불러오지 못했어요.</b><br>data 폴더의 JSON 파일이 같은 위치에 있는지 확인하고, 파일을 더블클릭하지 말고 웹주소나 로컬 서버로 열어주세요.<br><span class="note">'+String(err&&err.message||err)+'</span></div>');
   console.error(err);
@@ -668,7 +668,8 @@ sel.addEventListener('change',()=>{ try{localStorage.setItem('p121-me',sel.value
 /* ===== 상단 요약 칩 ===== */
 const filled=mapMembers.length;
 const linkCount=(()=>{let n=0; MEMBERS.forEach(a=>{ const t=new Set(); a.s.forEach(s=>(SYN[s]||[]).forEach(b=>{ if(b!==a.n) t.add(b); })); n+=t.size; }); return n;})();
-$('sumChips').innerHTML=[`멤버 ${MEMBERS.length}명`,`데이터 입력 ${filled}명`,`핵심고객군 ${gList.length}개`,`상생 연결 ${linkCount}건`,`영입 후보 직군 ${JOBRANK.length}개`].map(t=>`<span class="chip">${t}</span>`).join('');
+$('sumChips').innerHTML=[`멤버 ${MEMBERS.length}명`,`데이터 입력 ${filled}명`,`핵심고객군 ${gList.length}개`,`상생 연결 ${linkCount}건`,`영입 후보 직군 ${JOBRANK.length}개`].map(t=>`<span class="chip">${t}</span>`).join('')+
+  (STORE.mode==='loading'?'<span class="chip">수정 데이터 불러오는 중…</span>':Object.keys(STORE.edits).length?`<button class="chip ok" data-go="edit" style="cursor:pointer">수정 반영 ${Object.keys(STORE.edits).length}명 · ${STORE.mode==='db'?'공유 저장소':'이 브라우저'}</button>`:'');
 
 /* ================= 메가 선샤인 지도 ================= */
 const MG={W:900,C:450,RM:372,RG:150};
@@ -1219,6 +1220,7 @@ $('upDocs').addEventListener('click',async e=>{
 });
 
 const RENDER={mega:()=>{renderMap();renderMegaPanels();},mine:renderMine,rec:renderRec,team:renderTeam,members:renderMembers,recruit:renderRecruit,edit:renderEdit,upload:renderUpload,data:renderData,how:()=>{}};
+APP.chips=()=>{ const c=document.getElementById('sumChips'); if(c) c.querySelectorAll('.chip:last-child').forEach(x=>{ if(/불러오는/.test(x.textContent)) x.remove(); }); };
 APP.cur=()=>cur; APP.refresh=()=>{ if(cur==='edit'||cur==='upload') RENDER[cur](); };
 const start=startTab||(location.hash||'').slice(1);
 showTab(RENDER[start]?start:'mega');
