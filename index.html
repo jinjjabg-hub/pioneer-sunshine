@@ -368,8 +368,8 @@ tr:last-child td{border-bottom:0}
       <div class="field"><label for="upWho">어느 멤버 자료인가요</label><select id="upWho"></select></div>
       <div class="field"><label for="upKind">자료 종류</label><select id="upKind"><option>121 질문지</option><option>121 리뷰</option><option>소개 자료</option><option>기타</option></select></div>
     </div>
-    <label class="drop" id="upDrop"><input type="file" id="upFile" accept=".hwp,.hwpx,.docx,.pdf,.txt,.md,.csv">
-      <b>파일을 끌어다 놓거나 눌러서 고르세요</b><br><span class="note">한글(.hwp, .hwpx) · 워드(.docx) · PDF · 텍스트(.txt). 사진·스캔 PDF는 글자가 없어서 읽지 못해요.</span></label>
+    <label class="drop" id="upDrop"><input type="file" id="upFile" accept=".hwp,.hwpx,.docx,.pptx,.pdf,.txt,.md,.csv">
+      <b>파일을 끌어다 놓거나 눌러서 고르세요</b><br><span class="note">한글(.hwp, .hwpx) · 워드(.docx) · 파워포인트(.pptx) · PDF · 텍스트(.txt). 사진·스캔 PDF는 글자가 없어서 읽지 못해요.</span></label>
     <div class="field wide"><label for="upText">뽑은 글 (직접 붙여넣거나 고쳐도 돼요)</label><textarea id="upText" style="min-height:180px" placeholder="리뷰 글은 여기에 바로 붙여넣어도 돼요."></textarea><span class="note" id="upInfo"></span></div>
     <div class="actions"><button class="btn primary" id="upAI">AI로 정리하기</button><button class="btn" id="upKw">목록 표현으로 찾기</button><button class="btn" id="upSave">자료 저장</button><span class="msg" id="upMsg" role="status"></span></div>
     <div class="card sugg" id="upSugg" hidden></div>
@@ -412,7 +412,7 @@ const clipList = (v,k,n) => Array.isArray(v) ? v.filter(x=>typeof x==='string'&&
 function cleanMember(m){ m=m||{}; return {n:clip(m.n,40).trim(),co:clip(m.co,80),f:clip(m.f,80),role:clip(m.role,60),c:clipList(m.c,20,60),s:clipList(m.s,30,60),w:clip(m.w,2000),svc:clip(m.svc,300),who:clip(m.who,600)}; }
 const STORE={mode:'loading',db:null,sample:null,edits:{},docs:[],
   async init(){
-    const use=n=>window.claude&&window.claude.use?Promise.race([window.claude.use(n).catch(()=>null),new Promise(r=>setTimeout(()=>r(null),8000))]):Promise.resolve(null);
+    const use=n=>window.claude&&window.claude.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);   // 뷰어가 없으면 use()가 스스로 null을 준다
     const [db,sample]=await Promise.all([use('db'),use('sample')]);
     this.sample=sample;
     if(db){
@@ -535,9 +535,12 @@ async function extractText(file){
   const name=file.name.toLowerCase(), buf=await file.arrayBuffer();
   if(name.endsWith('.docx')){ const z=await readZip(buf); const x=await z.get('word/document.xml'); if(!x) throw new Error('워드 본문을 찾지 못했어요'); return xmlText(x); }
   if(name.endsWith('.hwpx')){ const z=await readZip(buf); const secs=z.names.filter(n=>/^Contents\/section\d+\.xml$/i.test(n)).sort((a,b)=>+a.match(/\d+/)[0]-+b.match(/\d+/)[0]); if(!secs.length) throw new Error('한글(hwpx) 본문을 찾지 못했어요'); const t=[]; for(const s of secs) t.push(xmlText(await z.get(s))); return t.join('\n'); }
+  if(name.endsWith('.pptx')){ const z=await readZip(buf); const sl=z.names.filter(n=>/^ppt\/slides\/slide\d+\.xml$/i.test(n)).sort((a,b)=>+a.match(/(\d+)\.xml/i)[1]-+b.match(/(\d+)\.xml/i)[1]); if(!sl.length) throw new Error('파워포인트 슬라이드를 찾지 못했어요'); const t=[]; for(const s of sl) t.push(xmlText(await z.get(s))); return t.join('\n'); }
+  if(name.endsWith('.ppt')) throw new Error('예전 파워포인트(.ppt)는 읽지 못해요. .pptx나 PDF로 저장해서 올려주세요');
   if(name.endsWith('.hwp')) return readHwp(buf);
   if(name.endsWith('.pdf')){ const t=await readPdf(buf); if(!t.trim()) throw new Error('PDF에 글자가 없어요 (스캔·사진 PDF). 글자를 복사해 붙여넣어 주세요'); return t; }
   if(name.endsWith('.doc')) throw new Error('예전 워드(.doc)는 읽지 못해요. .docx나 PDF로 저장해서 올려주세요');
+  const head=new Uint8Array(buf.slice(0,4096)); if(head.includes(0)||(head[0]===0x50&&head[1]===0x4B)) throw new Error('읽을 수 없는 파일 형식이에요. 한글·워드·파워포인트·PDF·텍스트 파일을 올려주세요');
   let t=new TextDecoder('utf-8').decode(buf); if((t.match(/\uFFFD/g)||[]).length>5){ try{ t=new TextDecoder('euc-kr').decode(buf); }catch(e){} } return t;
 }
 
@@ -549,7 +552,7 @@ document.addEventListener('click',e=>{ const g=e.target.closest('[data-go]'); if
 window.addEventListener('resize',()=>APP.resize&&APP.resize());
 APP.restart=tab=>{ const t=tab||(APP.cur&&APP.cur()); SHELL.innerHTML=SHELL_HTML; boot(...mergeData(BASE),t); };
 fetch_all().then(d=>{ BASE=d; boot(...mergeData(BASE));
-  STORE.init().then(()=>{ if(Object.keys(STORE.edits).length) APP.restart(); else APP.refresh&&APP.refresh(); });
+  STORE.init().then(()=>{ if(Object.keys(STORE.edits).length) APP.restart(); else { APP.refresh&&APP.refresh(); APP.chips&&APP.chips(); } });
 }).catch(err=>{
   document.querySelector('.shell').insertAdjacentHTML('afterbegin','<div class="empty" style="margin:20px"><b>데이터를 불러오지 못했어요.</b><br>data 폴더의 JSON 파일이 같은 위치에 있는지 확인하고, 파일을 더블클릭하지 말고 웹주소나 로컬 서버로 열어주세요.<br><span class="note">'+String(err&&err.message||err)+'</span></div>');
   console.error(err);
@@ -668,7 +671,8 @@ sel.addEventListener('change',()=>{ try{localStorage.setItem('p121-me',sel.value
 /* ===== 상단 요약 칩 ===== */
 const filled=mapMembers.length;
 const linkCount=(()=>{let n=0; MEMBERS.forEach(a=>{ const t=new Set(); a.s.forEach(s=>(SYN[s]||[]).forEach(b=>{ if(b!==a.n) t.add(b); })); n+=t.size; }); return n;})();
-$('sumChips').innerHTML=[`멤버 ${MEMBERS.length}명`,`데이터 입력 ${filled}명`,`핵심고객군 ${gList.length}개`,`상생 연결 ${linkCount}건`,`영입 후보 직군 ${JOBRANK.length}개`].map(t=>`<span class="chip">${t}</span>`).join('');
+$('sumChips').innerHTML=[`멤버 ${MEMBERS.length}명`,`데이터 입력 ${filled}명`,`핵심고객군 ${gList.length}개`,`상생 연결 ${linkCount}건`,`영입 후보 직군 ${JOBRANK.length}개`].map(t=>`<span class="chip">${t}</span>`).join('')+
+  (STORE.mode==='loading'?'<span class="chip">수정 데이터 불러오는 중…</span>':Object.keys(STORE.edits).length?`<button class="chip ok" data-go="edit" style="cursor:pointer">수정 반영 ${Object.keys(STORE.edits).length}명 · ${STORE.mode==='db'?'공유 저장소':'이 브라우저'}</button>`:'');
 
 /* ================= 메가 선샤인 지도 ================= */
 const MG={W:900,C:450,RM:372,RG:150};
@@ -1061,7 +1065,8 @@ function renderEdit(){
   if(PENDING){ loadDraft(PENDING.name||EDIT.sel); const d=EDIT.draft.m;
     PENDING.c.forEach(v=>{ if(!d.c.includes(v)) d.c.push(v); }); PENDING.s.forEach(v=>{ if(!d.s.includes(v)) d.s.push(v); });
     ['svc','who','w'].forEach(k=>{ if(PENDING[k]) d[k]=PENDING[k]; });
-    note.hidden=false; note.textContent=`'${PENDING.from}'에서 고른 항목을 담았어요. 확인하고 저장을 눌러야 반영돼요.`; PENDING=null; }
+    note.hidden=false; note.textContent=`'${PENDING.from}'에서 고른 항목을 담았어요. 아직 반영 전이에요. 아래 내용을 확인하고 [저장]을 눌러주세요.`; PENDING=null;
+    setTimeout(()=>{ const m=$('edMsg'); if(m){ m.className='msg err'; m.textContent='← 저장을 눌러야 지도와 추천에 반영돼요'; } },0); }
   else note.hidden=true;
   const d=EDIT.draft;
   $('edWho').innerHTML=MEMBERS.slice().sort((a,b)=>ko(a.n,b.n)).map(m=>`<option value="${esc(m.n)}">${esc(m.n)} · ${esc(m.f)}${STORE.edits[m.n]?' (수정됨)':''}</option>`).join('')+'<option value="__new">+ 새 멤버 추가</option>';
@@ -1139,6 +1144,7 @@ function drawSugg(){
   const quote=(f,v)=>{ const q=(r.evidence||[]).find(e=>e&&e.field===f&&(!v||e.value===v)); return q&&q.quote?`<div class="quote">"${esc(q.quote)}"</div>`:''; };
   let h=`<h3>${r.ai?'AI가 찾은 후보':'목록 표현으로 찾은 후보'} ${UP.who?`· ${esc(UP.who)} 대표`:''}</h3><p class="note" style="margin:0">체크한 항목만 데이터 수정 화면에 담겨요. ${r.ai?'자료에 없는 내용은 만들지 않도록 했지만, 근거 문장을 보고 확인해주세요.':''}</p>`;
   const cs=(r.c||[]).filter(v=>!m.c.includes(v)), ss=(r.s||[]).filter(v=>!m.s.includes(v));
+  if(r.ai&&!(r.c||[]).length&&!(r.s||[]).length) h+=`<div class="notice">이 자료에서 핵심고객·상생업종을 찾지 못했어요. '아는 단계' 질문지에는 보통 이 항목이 없어요. 신뢰 단계 질문지나 상생직군표가 있으면 그걸 올려주세요. 서비스·타겟 고객은 아래에서 담을 수 있어요.</div>`;
   h+=`<div><div class="k">핵심고객 추가 ${cs.length}개</div>${cs.length?cs.map(v=>row('c',v,true,tagLabel('c',v))+quote('c',v)).join(''):'<span class="note">새로 찾은 게 없어요</span>'}</div>`;
   h+=`<div><div class="k">상생업종 추가 ${ss.length}개</div>${ss.length?ss.map(v=>row('s',v,true,tagLabel('s',v))+quote('s',v)).join(''):'<span class="note">새로 찾은 게 없어요</span>'}</div>`;
   [['svc','서비스'],['who','타겟 고객'],['w','소개 신호']].forEach(([k,t])=>{ if(r[k]&&r[k]!==m[k]) h+=`<div><div class="k">${t} ${m[k]?'바꾸기':'채우기'}</div>${row(k,r[k],!m[k],m[k]?`<span class="note">(지금: ${esc(cut(m[k],40))})</span>`:'')}${quote(k)}</div>`; });
@@ -1204,11 +1210,14 @@ $('upSugg').addEventListener('click',e=>{
   if(!e.target.closest('#upApply')) return;
   const got={c:[],s:[],svc:'',who:'',w:''};
   $('upSugg').querySelectorAll('input[type=checkbox]:checked').forEach(x=>{ const k=x.dataset.k; if(k==='c'||k==='s') got[k].push(x.value); else got[k]=x.value; });
-  PENDING={name:UP.who,from:UP.file||'붙여넣은 글',...got}; showTab('edit'); window.scrollTo({top:0});
+  PENDING={name:UP.who,from:UP.file||'붙여넣은 글',...got};
+  if(UP.text.trim()&&UP.savedText!==UP.text) STORE.saveDoc({member:UP.who,kind:$('upKind').value,file:UP.file||'',text:UP.text}).then(()=>{ UP.savedText=UP.text; }).catch(()=>{});   // 원문은 자동으로 남긴다
+  showTab('edit'); setTimeout(()=>{ const b=$('edSave'); if(b){ b.scrollIntoView({block:'center'}); b.focus(); } },50);
 });
 $('upSave').addEventListener('click',async()=>{
   const msg=$('upMsg'); if(!UP.text.trim()){ msg.className='msg err'; msg.textContent='저장할 글이 없어요.'; return; }
-  try{ await STORE.saveDoc({member:UP.who,kind:$('upKind').value,file:UP.file||'',text:UP.text}); msg.className='msg ok'; msg.textContent=STORE.mode==='db'?'자료를 공유 저장소에 저장했어요.':'자료를 이 브라우저에 저장했어요.'; $('upStatus').innerHTML=statusHtml(); drawDocs(); }
+  if(UP.savedText===UP.text){ msg.className='msg ok'; msg.textContent='이미 저장된 자료예요.'; return; }
+  try{ await STORE.saveDoc({member:UP.who,kind:$('upKind').value,file:UP.file||'',text:UP.text}); UP.savedText=UP.text; msg.className='msg ok'; msg.textContent=STORE.mode==='db'?'자료를 공유 저장소에 저장했어요.':'자료를 이 브라우저에 저장했어요.'; $('upStatus').innerHTML=statusHtml(); drawDocs(); }
   catch(err){ msg.className='msg err'; msg.textContent=saveErr(err); }
 });
 $('upDocs').addEventListener('click',async e=>{
@@ -1219,6 +1228,7 @@ $('upDocs').addEventListener('click',async e=>{
 });
 
 const RENDER={mega:()=>{renderMap();renderMegaPanels();},mine:renderMine,rec:renderRec,team:renderTeam,members:renderMembers,recruit:renderRecruit,edit:renderEdit,upload:renderUpload,data:renderData,how:()=>{}};
+APP.chips=()=>{ const c=document.getElementById('sumChips'); if(c) c.querySelectorAll('.chip:last-child').forEach(x=>{ if(/불러오는/.test(x.textContent)) x.remove(); }); };
 APP.cur=()=>cur; APP.refresh=()=>{ if(cur==='edit'||cur==='upload') RENDER[cur](); };
 const start=startTab||(location.hash||'').slice(1);
 showTab(RENDER[start]?start:'mega');
