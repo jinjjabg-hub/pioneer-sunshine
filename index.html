@@ -1168,7 +1168,8 @@ $('upText').addEventListener('input',e=>{ UP.text=e.target.value; });
 $('upKw').addEventListener('click',()=>{
   const t=UP.text; if(!t.trim()){ $('upMsg').className='msg err'; $('upMsg').textContent='먼저 파일을 올리거나 글을 붙여넣어 주세요.'; return; }
   const find=v=>v.length>=2&&t.includes(v);
-  UP.sugg={ai:false,c:CUST_VOCAB.filter(find),s:SYN_VOCAB.filter(find),mentions:MEMBERS.filter(m=>m.n!==UP.who&&t.includes(m.n)).map(m=>({name:m.n,note:m.f}))};
+  const own=v=>(SYN[v]||[]).includes(UP.who);   // 본인 업종은 자기 파트너 후보에서 뺀다
+  UP.sugg={ai:false,c:CUST_VOCAB.filter(find),s:SYN_VOCAB.filter(v=>find(v)&&!own(v)),mentions:MEMBERS.filter(m=>m.n!==UP.who&&t.includes(m.n)).map(m=>({name:m.n,note:m.f}))};
   $('upMsg').className='msg ok'; $('upMsg').textContent='목록에 있는 표현과 똑같이 쓰인 것만 찾았어요.'; drawSugg();
 });
 let aiCtl=null;
@@ -1197,7 +1198,7 @@ ${t.slice(0,50000)}`;
   try{
     const r=await STORE.sample.json(prompt,{signal:aiCtl.signal,modelTier:'default'});
     const pick=(v,k,n)=>clipList(v,k,n);
-    UP.sugg={ai:true,c:pick(r.c,4,40),s:pick(r.s,8,40),svc:clip(r.svc,80),who:clip(r.who,200),w:clip(r.w,400),
+    UP.sugg={ai:true,c:pick(r.c,4,40),s:pick(r.s,8,40).filter(v=>!(SYN[v]||[]).includes(UP.who)),svc:clip(r.svc,80),who:clip(r.who,200),w:clip(r.w,400),
       evidence:Array.isArray(r.evidence)?r.evidence.slice(0,20):[],mentions:Array.isArray(r.mentions)?r.mentions.filter(x=>x&&byName[x.name]).slice(0,15):[],notes:pick(r.notes,3,200)};
     msg.className='msg ok'; msg.textContent=t.length>50000?'정리했어요. 자료가 길어서 앞부분 5만 자만 읽었어요.':'정리했어요. 아래에서 고르세요.'; drawSugg();
   }catch(e){
