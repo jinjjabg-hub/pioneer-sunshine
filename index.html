@@ -1256,10 +1256,11 @@ function renderDay(){
   const pairsOf=g=>g.flatMap((a,i)=>g.slice(i+1).map(b=>({a,b,r:score(byName[a],byName[b])})));
   const rounds=DAY.rounds.map(rd=>rd.filter(g=>Array.isArray(g)&&g.length>=2&&g.every(n=>byName[n])).map(g=>{ const ps=pairsOf(g); return {g,ps,total:ps.reduce((s,x)=>s+x.r.total,0)}; }));
   const allPairs=rounds.flat().flatMap(x=>x.ps), total=allPairs.reduce((s,x)=>s+x.r.total,0), zeros=allPairs.filter(x=>!x.r.total).length;
-  const people=[...new Set(rounds.flat().flatMap(x=>x.g))].filter(n=>!SB.has(n));
+  const REST=Array.isArray(DAY.rest)?DAY.rest:[];
+  const people=[...new Set([...rounds.flat().flatMap(x=>x.g),...REST.filter(n=>byName[n])])].filter(n=>!SB.has(n));
   $('dayTitle').textContent=DAY.title||'121 데이'; $('dayNote').textContent=DAY.note||''; $('dayMe').textContent=me;
   const trios=rounds.flat().filter(x=>x.g.length===3).length;
-  $('dayChips').innerHTML=[`참여 ${people.length}명`,`${rounds.length}라운드`,trios?`3인 조 ${trios}개`:'',(DAY.standby||[]).length?`대기자 ${DAY.standby.join('·')}`:'',(DAY.excluded||[]).length?`이번 제외 ${DAY.excluded.join('·')}`:'',`점수 합계 ${total}`,`0점 만남 ${zeros}`].filter(Boolean).map(t=>`<span class="chip${/^0점/.test(t)&&zeros?' miss':''}">${esc(t)}</span>`).join('');
+  $('dayChips').innerHTML=[`참여 ${people.length}명`,`${rounds.length}라운드`,trios?`3인 조 ${trios}개`:'',REST.length?`라운드별 쉼 ${REST.join('·')}`:'',(DAY.standby||[]).length?`대기자 ${DAY.standby.join('·')}`:'',(DAY.excluded||[]).length?`이번 제외 ${DAY.excluded.join('·')}`:'',`점수 합계 ${total}`,`0점 만남 ${zeros}`].filter(Boolean).map(t=>`<span class="chip${/^0점/.test(t)&&zeros?' miss':''}">${esc(t)}</span>`).join('');
   $('daySeg').innerHTML=[['all','전체'],...rounds.map((_,i)=>[String(i+1),`${i+1}라운드`])].map(([k,t])=>`<button data-r="${k}" aria-pressed="${dayRound===k}">${t}</button>`).join('');
   const why=(A,B,r)=>{ const w=[];
     if(r.p.mutual) w.push(`서로 상생업종으로 지목 (${A.n}: ${r.iW.join(', ')} / ${B.n}: ${r.tW.join(', ')})`);
@@ -1274,7 +1275,7 @@ function renderDay(){
   body.innerHTML=rounds.map((rd,i)=>{
     if(dayRound!=='all'&&dayRound!==String(i+1)) return '';
     const list=rd.filter(x=>!onlyMine||x.g.includes(me));
-    return `<section style="display:flex;flex-direction:column;gap:10px"><h2>${i+1}라운드 <span class="note">${rd.length}조 · 합계 ${rd.reduce((s,x)=>s+x.total,0)}점</span></h2>
+    return `<section style="display:flex;flex-direction:column;gap:10px"><h2>${i+1}라운드 <span class="note">${rd.length}쌍 · 합계 ${rd.reduce((s,x)=>s+x.total,0)}점${REST[i]?` · 이번 라운드 쉼: ${esc(REST[i])}`:''}</span></h2>
       <div class="grid2">${list.length?list.map(x=>{ const ms=x.g.map(n=>byName[n]), trio=x.g.length===3, any=f=>x.ps.some(p=>f(p.r));
         const tags=[trio?'<span class="tag t-w">3인 조</span>':'',any(r=>r.p.mutual)?'<span class="tag t-m">서로 지목</span>':'',any(r=>!r.p.mutual&&(r.iW.length||r.tW.length))?'<span class="tag t-g">한쪽 지목</span>':'',any(r=>r.shared.length)?'<span class="tag t-c">같은 고객군</span>':''].join('');
         return `<article class="card rc${x.g.includes(me)?' mine':''}"><div class="top"><div class="pair">${x.g.map(esc).join('<span class="x">↔</span>')}</div><span class="score">점수 ${x.total}</span></div>
@@ -1284,7 +1285,7 @@ function renderDay(){
       return {o:x.g.filter(q=>q!==n),s:x.ps.filter(p=>p.a===n||p.b===n).reduce((s,p)=>s+p.r.total,0)}; });
     return {n,cells,sum:cells.reduce((s,c)=>s+(c?c.s:0),0)}; });
   $('dayTable').innerHTML=`<tr><th>멤버</th>${rounds.map((_,i)=>`<th>${i+1}라운드</th>`).join('')}<th>합계</th></tr>`+
-    rows.map(x=>`<tr><td class="${x.n===me?'me':''}"><b>${esc(x.n)}</b>${SB.has(x.n)?' <span class="tag t-x">대기</span>':''}</td>${x.cells.map(c=>`<td class="${x.n===me?'me':''}">${c?`${c.o.map(esc).join(' · ')} <span class="note">${c.s}</span>`:'<span class="note">—</span>'}</td>`).join('')}<td class="${x.n===me?'me':''}">${x.sum}</td></tr>`).join('');
+    rows.map(x=>`<tr><td class="${x.n===me?'me':''}"><b>${esc(x.n)}</b>${SB.has(x.n)?' <span class="tag t-x">대기</span>':''}</td>${x.cells.map(c=>`<td class="${x.n===me?'me':''}">${c?`${c.o.map(esc).join(' · ')} <span class="note">${c.s}</span>`:`<span class="note">${REST.includes(x.n)?'쉼':'—'}</span>`}</td>`).join('')}<td class="${x.n===me?'me':''}">${x.sum}</td></tr>`).join('');
 }
 $('daySeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-r]'); if(!b) return; dayRound=b.dataset.r; renderDay(); });
 $('dayMine').addEventListener('change',renderDay);
