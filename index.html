@@ -143,6 +143,11 @@ button,select,input{font:inherit;color:inherit}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:14px;align-items:start}
 .rc{display:flex;flex-direction:column;gap:9px}
 .rc.done{opacity:.55}
+.rc.mine{outline:2px solid var(--red);outline-offset:1px}
+.pair{font-size:17px;font-weight:700}
+.pair .x{color:var(--muted);font-weight:400;margin:0 6px}
+.qq{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px}
+#dayTable td.me,#dayTable th.me{background:var(--violet-soft)}
 .rc.flash{outline:3px solid var(--violet);outline-offset:2px}
 .rc .top{display:flex;gap:8px;justify-content:space-between;align-items:flex-start}
 .rc .nm{font-size:17px;font-weight:700;color:var(--violet)}
@@ -290,6 +295,19 @@ tr:last-child td{border-bottom:0}
     <div id="nolink"></div>
   </main>
 
+  <!-- 121 데이 -->
+  <main class="page" id="pane-day" hidden>
+    <div class="head">
+      <h1 id="dayTitle">121 데이</h1>
+      <p class="note" style="margin:0" id="dayNote"></p>
+      <div class="chips" id="dayChips"></div>
+    </div>
+    <div class="bar"><div class="seg" id="daySeg"></div><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="dayMine"> 내 짝만 보기 (나는 = <span id="dayMe"></span>)</label></div>
+    <div id="dayBody" style="display:flex;flex-direction:column;gap:18px"></div>
+    <h2>멤버별 일정</h2>
+    <div class="tablewrap"><table id="dayTable"></table></div>
+  </main>
+
   <!-- 파워팀 -->
   <main class="page" id="pane-team" hidden>
     <div class="head">
@@ -404,7 +422,7 @@ tr:last-child td{border-bottom:0}
 
 <script>
 const fetch_all=()=>Promise.all(['members','groups','synergy-map','partner-groups'].map(n=>fetch('data/'+n+'.json').then(r=>{if(!r.ok)throw new Error(n+'.json '+r.status);return r.json()})))
-  .then(d=>fetch('data/categories.json').then(r=>r.ok?r.json():null).catch(()=>null).then(c=>[...d,c]));   // 카테고리는 없어도 동작
+  .then(d=>Promise.all(['categories','121day'].map(n=>fetch('data/'+n+'.json').then(r=>r.ok?r.json():null).catch(()=>null))).then(x=>[...d,...x]));   // 카테고리·121 데이 매칭표는 없어도 동작
 /* ===== 저장소: 아티팩트에서는 공유 db, 그 밖에서는 이 브라우저(localStorage) ===== */
 const hexId = s => 'm'+[...new TextEncoder().encode(s)].map(b=>b.toString(16).padStart(2,'0')).join('');
 const clip = (v,n) => typeof v==='string' ? v.slice(0,n) : '';
@@ -443,7 +461,7 @@ const STORE={mode:'loading',db:null,sample:null,edits:{},docs:[],
 };
 // 기본 데이터 위에 수정분을 덮어쓴다 (멤버·카테고리·나를 부르는 업종)
 function mergeData(BASE){
-  const [M0,GROUPS,SYN0,PG,CAT0]=BASE;
+  const [M0,GROUPS,SYN0,PG,CAT0,DAY]=BASE;
   const ms=M0.map(m=>({...m})), idx=Object.fromEntries(ms.map((m,i)=>[m.n,i]));
   const SYN=JSON.parse(JSON.stringify(SYN0)), CAT=CAT0?JSON.parse(JSON.stringify(CAT0)):null;
   Object.values(STORE.edits).forEach(e=>{
@@ -454,7 +472,7 @@ function mergeData(BASE){
       clipList(e.covers,20,60).forEach(k=>{ (SYN[k]=SYN[k]||[]).push(m.n); }); }
     if(CAT&&typeof e.cat==='string'){ Object.keys(CAT.categories).forEach(c=>CAT.categories[c]=CAT.categories[c].filter(n=>n!==m.n&&n!==e.from)); if(CAT.categories[e.cat]) CAT.categories[e.cat].push(m.n); }
   });
-  return [ms,GROUPS,SYN,PG,CAT];
+  return [ms,GROUPS,SYN,PG,CAT,DAY];
 }
 
 /* ===== 파일에서 글자 뽑기 (워드·한글·PDF·텍스트) ===== */
@@ -558,7 +576,7 @@ fetch_all().then(d=>{ BASE=d; boot(...mergeData(BASE));
   console.error(err);
 });
 
-function boot(MEMBERS,GROUPS,SYN,PG,CAT,startTab){
+function boot(MEMBERS,GROUPS,SYN,PG,CAT,DAY,startTab){
 /* ===== v1 계산 로직 (그대로) ===== */
 const RAW2G = {}; Object.entries(GROUPS).forEach(([g,arr])=>arr.forEach(r=>RAW2G[r]=g));
 const byName = Object.fromEntries(MEMBERS.map(m=>[m.n,m]));
@@ -655,7 +673,7 @@ sel.value = byName[saved]?saved:'송승훈';
 let mineWho = sel.value;
 
 /* ===== 탭 ===== */
-const TABS=[['mega','메가 선샤인'],['mine','나의 선샤인'],['rec','121 추천'],['team','파워팀'],['members','멤버'],['recruit','영입 지도'],['edit','데이터 수정'],['upload','자료 업로드'],['data','데이터 점검'],['how','점수 기준']];
+const TABS=[['mega','메가 선샤인'],['mine','나의 선샤인'],['rec','121 추천'],['day','121 데이'],['team','파워팀'],['members','멤버'],['recruit','영입 지도'],['edit','데이터 수정'],['upload','자료 업로드'],['data','데이터 점검'],['how','점수 기준']];
 let cur='mega';
 $('tabs').innerHTML=TABS.map(([k,t])=>`<button role="tab" id="tab-${k}" data-t="${k}" aria-selected="false">${t}</button>`).join('');
 function showTab(t){
@@ -1228,7 +1246,51 @@ $('upDocs').addEventListener('click',async e=>{
   try{ await STORE.removeDoc(r.dataset.rm); $('upStatus').innerHTML=statusHtml(); drawDocs(); }catch(err){ $('upMsg').className='msg err'; $('upMsg').textContent=saveErr(err); }
 });
 
-const RENDER={mega:()=>{renderMap();renderMegaPanels();},mine:renderMine,rec:renderRec,team:renderTeam,members:renderMembers,recruit:renderRecruit,edit:renderEdit,upload:renderUpload,data:renderData,how:()=>{}};
+/* ================= 121 데이 (data/121day.json의 짝을 지금 점수로 다시 계산해서 보여준다) ================= */
+let dayRound='all';
+function renderDay(){
+  const body=$('dayBody');
+  if(!DAY||!Array.isArray(DAY.rounds)){ body.innerHTML='<div class="empty">121 데이 매칭표(data/121day.json)가 없어요.</div>'; $('dayTable').innerHTML=''; return; }
+  const me=sel.value, onlyMine=$('dayMine').checked, SB=new Set(DAY.standby||[]);
+  // 한 조 = 2명(짝) 또는 3명(3인 조). 조 안의 모든 두 사람 사이 점수를 지금 데이터로 다시 계산한다
+  const pairsOf=g=>g.flatMap((a,i)=>g.slice(i+1).map(b=>({a,b,r:score(byName[a],byName[b])})));
+  const rounds=DAY.rounds.map(rd=>rd.filter(g=>Array.isArray(g)&&g.length>=2&&g.every(n=>byName[n])).map(g=>{ const ps=pairsOf(g); return {g,ps,total:ps.reduce((s,x)=>s+x.r.total,0)}; }));
+  const allPairs=rounds.flat().flatMap(x=>x.ps), total=allPairs.reduce((s,x)=>s+x.r.total,0), zeros=allPairs.filter(x=>!x.r.total).length;
+  const REST=Array.isArray(DAY.rest)?DAY.rest:[];
+  const people=[...new Set([...rounds.flat().flatMap(x=>x.g),...REST.filter(n=>byName[n])])].filter(n=>!SB.has(n));
+  $('dayTitle').textContent=DAY.title||'121 데이'; $('dayNote').textContent=DAY.note||''; $('dayMe').textContent=me;
+  const trios=rounds.flat().filter(x=>x.g.length===3).length;
+  $('dayChips').innerHTML=[`참여 ${people.length}명`,`${rounds.length}라운드`,trios?`3인 조 ${trios}개`:'',REST.length?`라운드별 쉼 ${REST.join('·')}`:'',(DAY.standby||[]).length?`대기자 ${DAY.standby.join('·')}`:'',(DAY.excluded||[]).length?`이번 제외 ${DAY.excluded.join('·')}`:'',`점수 합계 ${total}`,`0점 만남 ${zeros}`].filter(Boolean).map(t=>`<span class="chip${/^0점/.test(t)&&zeros?' miss':''}">${esc(t)}</span>`).join('');
+  $('daySeg').innerHTML=[['all','전체'],...rounds.map((_,i)=>[String(i+1),`${i+1}라운드`])].map(([k,t])=>`<button data-r="${k}" aria-pressed="${dayRound===k}">${t}</button>`).join('');
+  const why=(A,B,r)=>{ const w=[];
+    if(r.p.mutual) w.push(`서로 상생업종으로 지목 (${A.n}: ${r.iW.join(', ')} / ${B.n}: ${r.tW.join(', ')})`);
+    else { if(r.iW.length) w.push(`${A.n} 대표가 '${r.iW.join(', ')}'(으)로 ${B.n} 대표를 지목`); if(r.tW.length) w.push(`${B.n} 대표가 '${r.tW.join(', ')}'(으)로 ${A.n} 대표를 지목`); }
+    r.shared.forEach(g=>w.push(`같은 고객군 「${g}」 (챕터에서 ${GDF[g]}명)`));
+    return w; };
+  const pairBlock=(x,multi)=>{ const A=byName[x.a],B=byName[x.b], rb=score(B,A);
+    return `${multi?`<div class="k" style="margin-top:4px">${esc(x.a)} ↔ ${esc(x.b)} · ${x.r.total}점</div>`:''}<ul class="why">${why(A,B,x.r).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+      <details><summary class="note" style="cursor:pointer">${multi?`${esc(x.a)}·${esc(x.b)} `:''}서로 물어볼 질문</summary><div class="qq" style="margin-top:8px">
+        <div class="qbox"><div class="k">${esc(A.n)} → ${esc(B.n)}</div><ol>${questions(A,x.r).map(q=>`<li>${esc(q)}</li>`).join('')}</ol></div>
+        <div class="qbox"><div class="k">${esc(B.n)} → ${esc(A.n)}</div><ol>${questions(B,rb).map(q=>`<li>${esc(q)}</li>`).join('')}</ol></div></div></details>`; };
+  body.innerHTML=rounds.map((rd,i)=>{
+    if(dayRound!=='all'&&dayRound!==String(i+1)) return '';
+    const list=rd.filter(x=>!onlyMine||x.g.includes(me));
+    return `<section style="display:flex;flex-direction:column;gap:10px"><h2>${i+1}라운드 <span class="note">${rd.length}쌍 · 합계 ${rd.reduce((s,x)=>s+x.total,0)}점${REST[i]?` · 이번 라운드 쉼: ${esc(REST[i])}`:''}</span></h2>
+      <div class="grid2">${list.length?list.map(x=>{ const ms=x.g.map(n=>byName[n]), trio=x.g.length===3, any=f=>x.ps.some(p=>f(p.r));
+        const tags=[trio?'<span class="tag t-w">3인 조</span>':'',any(r=>r.p.mutual)?'<span class="tag t-m">서로 지목</span>':'',any(r=>!r.p.mutual&&(r.iW.length||r.tW.length))?'<span class="tag t-g">한쪽 지목</span>':'',any(r=>r.shared.length)?'<span class="tag t-c">같은 고객군</span>':''].join('');
+        return `<article class="card rc${x.g.includes(me)?' mine':''}"><div class="top"><div class="pair">${x.g.map(esc).join('<span class="x">↔</span>')}</div><span class="score">점수 ${x.total}</span></div>
+          <div class="sub">${ms.map(m=>`${esc(m.co)} · ${esc(m.f)}`).join('  /  ')}</div><div class="tags">${tags}</div>${x.ps.map(p=>pairBlock(p,trio)).join('')}</article>`; }).join(''):'<div class="empty">이 라운드에는 내 짝이 없어요.</div>'}</div></section>`; }).join('');
+  // 멤버별 일정
+  const rows=[...people,...(DAY.standby||[])].map(n=>{ const cells=rounds.map(rd=>{ const x=rd.find(p=>p.g.includes(n)); if(!x) return null;
+      return {o:x.g.filter(q=>q!==n),s:x.ps.filter(p=>p.a===n||p.b===n).reduce((s,p)=>s+p.r.total,0)}; });
+    return {n,cells,sum:cells.reduce((s,c)=>s+(c?c.s:0),0)}; });
+  $('dayTable').innerHTML=`<tr><th>멤버</th>${rounds.map((_,i)=>`<th>${i+1}라운드</th>`).join('')}<th>합계</th></tr>`+
+    rows.map(x=>`<tr><td class="${x.n===me?'me':''}"><b>${esc(x.n)}</b>${SB.has(x.n)?' <span class="tag t-x">대기</span>':''}</td>${x.cells.map(c=>`<td class="${x.n===me?'me':''}">${c?`${c.o.map(esc).join(' · ')} <span class="note">${c.s}</span>`:`<span class="note">${REST.includes(x.n)?'쉼':'—'}</span>`}</td>`).join('')}<td class="${x.n===me?'me':''}">${x.sum}</td></tr>`).join('');
+}
+$('daySeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-r]'); if(!b) return; dayRound=b.dataset.r; renderDay(); });
+$('dayMine').addEventListener('change',renderDay);
+
+const RENDER={mega:()=>{renderMap();renderMegaPanels();},mine:renderMine,rec:renderRec,day:renderDay,team:renderTeam,members:renderMembers,recruit:renderRecruit,edit:renderEdit,upload:renderUpload,data:renderData,how:()=>{}};
 APP.chips=()=>{ const c=document.getElementById('sumChips'); if(c) c.querySelectorAll('.chip:last-child').forEach(x=>{ if(/불러오는/.test(x.textContent)) x.remove(); }); };
 APP.cur=()=>cur; APP.refresh=()=>{ if(cur==='edit'||cur==='upload') RENDER[cur](); };
 const start=startTab||(location.hash||'').slice(1);
