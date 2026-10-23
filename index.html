@@ -598,7 +598,9 @@ async function extractText(file){
 const SHELL=document.querySelector('.shell'), SHELL_HTML=SHELL.innerHTML;
 let BASE=null, PENDING=null;
 const EDIT={sel:null,draft:null,flash:''}, UP={who:null,text:'',file:'',sugg:null}, APP={};
-const VIS={job:'',name:'',cust:[],ss:[]};   // 비지터 입력: 메모리에만 두고 저장하지 않는다 (새로고침하면 사라짐)
+const VIS={job:'',name:'',cust:[],ss:[]};
+const ADMIN={on:false};   // 데이터 수정·자료 업로드 탭은 운영진만: 평소엔 숨기고, PIONEER 로고를 5번 연달아 누르면 이 화면에서만 보인다 (저장 안 함)
+const ADMIN_TABS=['edit','upload'];   // 비지터 입력: 메모리에만 두고 저장하지 않는다 (새로고침하면 사라짐)
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-go]'); if(g&&APP.go) APP.go(g.dataset.go); const o=e.target.closest('[data-open]'); if(o&&APP.open) APP.open(o.dataset.open); });
 window.addEventListener('resize',()=>APP.resize&&APP.resize());
 APP.restart=tab=>{ const t=tab||(APP.cur&&APP.cur()); SHELL.innerHTML=SHELL_HTML; boot(...mergeData(BASE),t); };
@@ -708,7 +710,10 @@ let mineWho = sel.value;
 /* ===== 탭 ===== */
 const TABS=[['mega','메가 선샤인'],['mine','나의 선샤인'],['visitor','비지터 선샤인'],['rec','121 추천'],['day','121 데이'],['team','파워팀'],['members','멤버'],['recruit','영입 지도'],['edit','데이터 수정'],['upload','자료 업로드'],['data','데이터 점검'],['how','점수 기준']];
 let cur='mega';
-$('tabs').innerHTML=TABS.map(([k,t])=>`<button role="tab" id="tab-${k}" data-t="${k}" aria-selected="false">${t}</button>`).join('');
+$('tabs').innerHTML=TABS.map(([k,t])=>`<button role="tab" id="tab-${k}" data-t="${k}" aria-selected="false"${ADMIN_TABS.includes(k)&&!ADMIN.on?' hidden':''}>${t}</button>`).join('');
+let brandTaps=[];
+document.querySelector('.brand').addEventListener('click',()=>{ const t=Date.now(); brandTaps=[...brandTaps.filter(x=>t-x<2000),t]; if(brandTaps.length<5) return; brandTaps=[];
+  ADMIN.on=!ADMIN.on; ADMIN_TABS.forEach(k=>$('tab-'+k).hidden=!ADMIN.on); if(!ADMIN.on&&ADMIN_TABS.includes(cur)) showTab('mega'); });
 function showTab(t){
   cur=t;
   TABS.forEach(([k])=>{ $('tab-'+k).setAttribute('aria-selected',k===t); $('pane-'+k).hidden=k!==t; });
@@ -723,7 +728,7 @@ sel.addEventListener('change',()=>{ try{localStorage.setItem('p121-me',sel.value
 const filled=mapMembers.length;
 const linkCount=(()=>{let n=0; MEMBERS.forEach(a=>{ const t=new Set(); a.s.forEach(s=>(SYN[s]||[]).forEach(b=>{ if(b!==a.n) t.add(b); })); n+=t.size; }); return n;})();
 $('sumChips').innerHTML=[`멤버 ${MEMBERS.length}명`,`데이터 입력 ${filled}명`,`핵심고객군 ${gList.length}개`,`상생 연결 ${linkCount}건`,`영입 후보 직군 ${JOBRANK.length}개`].map(t=>`<span class="chip">${t}</span>`).join('')+
-  (STORE.mode==='loading'?'<span class="chip">수정 데이터 불러오는 중…</span>':Object.keys(STORE.edits).length?`<button class="chip ok" data-go="edit" style="cursor:pointer">수정 반영 ${Object.keys(STORE.edits).length}명 · ${STORE.mode==='db'?'공유 저장소':'이 브라우저'}</button>`:'');
+  (STORE.mode==='loading'?'<span class="chip">수정 데이터 불러오는 중…</span>':Object.keys(STORE.edits).length?ADMIN.on?`<button class="chip ok" data-go="edit" style="cursor:pointer">수정 반영 ${Object.keys(STORE.edits).length}명 · ${STORE.mode==='db'?'공유 저장소':'이 브라우저'}</button>`:`<span class="chip">수정 반영 ${Object.keys(STORE.edits).length}명</span>`:'');
 
 /* ================= 메가 선샤인 지도 ================= */
 const MG={W:900,C:450,RM:372,RG:150};
@@ -1465,7 +1470,7 @@ const RENDER={mega:()=>{renderMap();renderMegaPanels();},mine:renderMine,visitor
 APP.chips=()=>{ const c=document.getElementById('sumChips'); if(c) c.querySelectorAll('.chip:last-child').forEach(x=>{ if(/불러오는/.test(x.textContent)) x.remove(); }); };
 APP.cur=()=>cur; APP.refresh=()=>{ if(cur==='edit'||cur==='upload') RENDER[cur](); };
 const start=startTab||(location.hash||'').slice(1);
-showTab(RENDER[start]?start:'mega');
+showTab(RENDER[start]&&(ADMIN.on||!ADMIN_TABS.includes(start))?start:'mega');
 }
 </script>
 </body>
