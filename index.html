@@ -230,6 +230,18 @@ tr:last-child td{border-bottom:0}
 .doc summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
 .doc pre{white-space:pre-wrap;font-family:var(--f-body);font-size:13px;max-height:320px;overflow:auto;background:var(--tint);padding:10px;border-radius:8px}
 .notice{background:var(--violet-soft);color:var(--ink);border-radius:12px;padding:10px 14px;font-size:14px}
+.pickchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pickchips button{border:1px solid var(--line);background:var(--panel);padding:5px 12px;border-radius:999px;font-size:13px;color:var(--muted);cursor:pointer}
+.pickchips button[aria-pressed="true"]{background:var(--green-soft);color:var(--green);border-color:transparent;font-weight:600}
+.vstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px}
+.vstat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.vstat b{display:block;font-size:30px;line-height:1.15;font-variant-numeric:tabular-nums}
+.vstat span{font-size:13px;color:var(--muted)}
+.rstar .lc{stroke:var(--violet);stroke-width:2;stroke-dasharray:4 4}
+.star .s-vk{fill:var(--violet);fill-opacity:.55} .star .ring-o{fill:none;stroke:var(--orange);stroke-width:4}
+.wow{font-size:14px;font-weight:600;color:var(--orange)}
+.vcust .star svg{max-width:560px;margin:0 auto}
+.vsig{font-size:13.5px;line-height:1.55;white-space:pre-line;background:var(--tint);border-radius:10px;padding:8px 11px}
 @media (max-width:640px){.page{padding:20px 16px 28px}.nav{padding:12px 14px}h1{font-size:21px}.info{height:8em}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -276,6 +288,26 @@ tr:last-child td{border-bottom:0}
     </div>
     <div class="stars" id="mineStars"></div>
     <div class="mebox" id="mineProfile"></div>
+  </main>
+
+  <!-- 비지터 선샤인 (입력은 저장하지 않음) -->
+  <main class="page" id="pane-visitor" hidden>
+    <div class="head">
+      <h1>비지터 선샤인</h1>
+      <p class="note" style="margin:0">비지터의 업종을 넣으면 파이오니어에서 누가 이 업종을 기다리고 있는지 보여줘요. 초대하기 전에 보여주거나 초대 문구를 복사해서 보내세요. <b>입력한 내용은 어디에도 저장되지 않고, 새로고침하면 사라져요.</b></p>
+    </div>
+    <div class="form">
+      <div class="field"><label for="vsJob">비지터 업종 (필수)</label><input id="vsJob" list="dlJob" autocomplete="off" placeholder="예: 노무사"></div>
+      <div class="field"><label for="vsName">비지터 이름 (선택 · 초대 문구에만 써요)</label><input id="vsName" autocomplete="off" placeholder="예: 홍길동"></div>
+      <div class="field wide"><span class="flabel">비지터가 주로 만나는 고객 (최대 3개 · 직접 쓰거나 아래에서 고르기)</span>
+        <div class="addrow"><input id="vsCin" autocomplete="off" placeholder="예: 요양병원 원장, 건물주, 프랜차이즈 점주" aria-label="주고객 직접 입력"><button class="btn" id="vsCadd">추가</button></div>
+        <div class="tagrow" id="vsC" style="margin-top:6px"></div>
+        <div class="pickchips" id="vsG"></div></div>
+      <details class="field wide"><summary class="flabel" style="cursor:pointer">비지터가 소개받고 싶은 업종 (선택 · 챕터 멤버 업종)</summary><div class="pickchips" id="vsS"></div></details>
+    </div>
+    <datalist id="dlJob"></datalist>
+    <div class="actions"><button class="btn" id="vsClear">모두 지우기</button></div>
+    <div id="vsOut" style="display:flex;flex-direction:column;gap:14px"></div>
   </main>
 
   <!-- 121 추천 -->
@@ -566,6 +598,7 @@ async function extractText(file){
 const SHELL=document.querySelector('.shell'), SHELL_HTML=SHELL.innerHTML;
 let BASE=null, PENDING=null;
 const EDIT={sel:null,draft:null,flash:''}, UP={who:null,text:'',file:'',sugg:null}, APP={};
+const VIS={job:'',name:'',cust:[],ss:[]};   // 비지터 입력: 메모리에만 두고 저장하지 않는다 (새로고침하면 사라짐)
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-go]'); if(g&&APP.go) APP.go(g.dataset.go); const o=e.target.closest('[data-open]'); if(o&&APP.open) APP.open(o.dataset.open); });
 window.addEventListener('resize',()=>APP.resize&&APP.resize());
 APP.restart=tab=>{ const t=tab||(APP.cur&&APP.cur()); SHELL.innerHTML=SHELL_HTML; boot(...mergeData(BASE),t); };
@@ -673,7 +706,7 @@ sel.value = byName[saved]?saved:'송승훈';
 let mineWho = sel.value;
 
 /* ===== 탭 ===== */
-const TABS=[['mega','메가 선샤인'],['mine','나의 선샤인'],['rec','121 추천'],['day','121 데이'],['team','파워팀'],['members','멤버'],['recruit','영입 지도'],['edit','데이터 수정'],['upload','자료 업로드'],['data','데이터 점검'],['how','점수 기준']];
+const TABS=[['mega','메가 선샤인'],['mine','나의 선샤인'],['visitor','비지터 선샤인'],['rec','121 추천'],['day','121 데이'],['team','파워팀'],['members','멤버'],['recruit','영입 지도'],['edit','데이터 수정'],['upload','자료 업로드'],['data','데이터 점검'],['how','점수 기준']];
 let cur='mega';
 $('tabs').innerHTML=TABS.map(([k,t])=>`<button role="tab" id="tab-${k}" data-t="${k}" aria-selected="false">${t}</button>`).join('');
 function showTab(t){
@@ -929,6 +962,144 @@ function renderMine(){
     ${M.w?`<div class="soft" style="grid-column:1/-1"><div class="k">121에서 전달할 소개 신호</div><div class="oneliner">${esc(M.w)}</div></div>`:''}`;
   const b=$('mineBack'); if(b) b.onclick=()=>{ mineWho=sel.value; renderMine(); };
 }
+
+/* ================= 비지터 선샤인 ================= */
+const stdJob=s=>STDJOB[s]||s;
+const koSort=(a,b)=>a.localeCompare(b,'ko');
+(()=>{ const want={}; MEMBERS.forEach(m=>new Set(m.s.map(stdJob)).forEach(k=>want[k]=(want[k]||0)+1));
+  const keys=[...new Set([...Object.keys(want).filter(k=>!NOTJOB.has(k)),...Object.keys(SYN)])].sort((a,b)=>(want[b]||0)-(want[a]||0)||koSort(a,b));
+  $('dlJob').innerHTML=keys.map(k=>`<option value="${esc(k)}" label="${SYN[k]?'챕터에 있음 · '+esc(SYN[k].join(', ')):(want[k]||0)+'명이 찾음'}"></option>`).join(''); })();
+// 직접 쓴 고객 표현 → 가장 가까운 고객군 (고객군 이름·원문 표현과 단어가 겹치는 정도로 고른다)
+const toks=t=>t.split(/[\s·,\/()~]+/).filter(x=>x.length>=2);
+// 운영진이 정해 둔 표현 매핑(CLAUDE.md): 이 단어가 들어 있으면 해당 원문 표현의 고객군으로 본다
+const CUST_ALIAS=[['건물주','상가 임대인'],['임대인','상가 임대인'],['병원','숙박·병원·상가 사업주'],['호텔','숙박·병원·상가 사업주'],['자영업','개인·소상공인'],['복지','기업 인사·총무'],['총무','기업 인사·총무'],['인사담당','기업 인사·총무'],['협회','협회·모임 총무·회장'],['모임','협회·모임 총무·회장'],['오픈','창업 준비자'],['이사','이사·입주 가구'],['입주','이사·입주 가구'],['시행사','건설사']];
+function matchGroup(t){
+  if(RAW2G[t]&&GDF[RAW2G[t]]) return RAW2G[t]; if(GDF[t]) return t;
+  const al=CUST_ALIAS.find(([k,r])=>t.includes(k)&&GDF[RAW2G[r]]); if(al) return RAW2G[al[1]];
+  const T=toks(t); let best=null,bs=0;
+  gList.forEach(g=>{ let sc=0;
+    [g,...GROUPS[g]].forEach(r=>{ if(r.includes(t)||t.includes(r)) sc+=3; toks(r).forEach(x=>T.forEach(y=>{ if(x===y) sc+=2; else if(x.includes(y)||y.includes(x)) sc+=1; })); });
+    if(sc>bs){ bs=sc; best=g; } });
+  return best;
+}
+// 멤버가 적은 타겟 고객·핵심고객·서비스 글에서 이 고객 표현의 단어를 찾는다 (3글자 이상 단어는 앞 2글자로도 찾음: 요양원 → 요양병원)
+function keywordMembers(t){
+  const T=toks(t), keys=[...new Set([...T,...T.filter(x=>x.length>=3).map(x=>x.slice(0,2))])].filter(k=>!/^(대표|고객|사람|기업|회사|운영)$/.test(k));
+  return MEMBERS.map(m=>{ const txt=[m.who,m.svc,...m.c].join(' '); const k=keys.find(x=>txt.includes(x)); return k?{o:m,k}:null; }).filter(Boolean);
+}
+const vGroups=()=>[...new Set(VIS.cust.map(e=>e.g).filter(Boolean))];
+function custStar(e,job,scoreOf){
+  const inG=e.g?membersIn(e.g):[], kw=e.own?keywordMembers(e.t).filter(x=>!inG.includes(x.o)):[];
+  const sats=[...inG.map(o=>({o,r:scoreOf(o),k:''})),...kw.map(x=>({o:x.o,r:scoreOf(x.o),k:x.k}))]
+    .sort((a,b)=>(!!b.r.tW.length-!!a.r.tW.length)||(!!a.k-!!b.k)||b.r.total-a.r.total||koSort(a.o.n,b.o.n));
+  const top=sats.slice(0,8), W=560,H=520,cx=W/2,cy=262,R=178,N=top.length; let h='';
+  top.forEach((x,i)=>{ const a=-Math.PI/2+(i+1)*TAU/(N+1), px=cx+R*Math.cos(a), py=cy+R*Math.sin(a), f=v=>v.toFixed(1);
+    h=`<line class="${x.k?'l-x':'l-v'}" x1="${cx}" y1="${cy}" x2="${f(px)}" y2="${f(py)}"/>`+h;
+    h+=`${x.r.tW.length?`<circle class="ring-o" cx="${f(px)}" cy="${f(py)}" r="40"/>`:''}<circle class="${x.k?'s-vk':'s-v'}" cx="${f(px)}" cy="${f(py)}" r="34"/><text class="s-vt" x="${f(px)}" y="${f(py+5)}" font-size="13.5" text-anchor="middle">${esc(x.o.n)}</text>
+      <text class="s-lb" x="${f(px)}" y="${f(py+54)}" font-size="12" text-anchor="middle">${esc(cut(x.o.f,11))}</text>
+      ${x.r.tW.length||x.k?`<text x="${f(px)}" y="${f(py+69)}" font-size="11.5" text-anchor="middle" style="fill:${x.r.tW.length?'var(--orange)':'var(--muted)'};font-weight:600">${x.r.tW.length?esc(cut(job,8))+' 찾음':"'"+esc(x.k)+"' 언급"}</text>`:''}`; });
+  const cw=wrap2(e.t,7).slice(0,2), jw=wrap2(job,7).slice(0,2);
+  h=`<line class="l-r" x1="${cx}" y1="${cy-66}" x2="${cx}" y2="${cy-82}"/>`+h;
+  h+=`<circle class="s-c" cx="${cx}" cy="${cy}" r="64"/>${cw.map((w,k)=>`<text class="s-ct" x="${cx}" y="${(cy+6+(k-(cw.length-1)/2)*18).toFixed(1)}" font-size="15" text-anchor="middle">${esc(w)}</text>`).join('')}
+    <circle class="s-r" cx="${cx}" cy="${cy-124}" r="42"/>${jw.map((w,k)=>`<text class="s-rt" x="${cx}" y="${(cy-119+(k-(jw.length-1)/2)*15).toFixed(1)}" font-size="12.5" text-anchor="middle">${esc(w)}</text>`).join('')}`;
+  const nW=sats.filter(x=>x.r.tW.length).length;
+  return {n:sats.length,nW,nK:kw.length,names:sats.map(x=>x.o.n),
+    svg:`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(e.t)} 고객 선샤인, 멤버 ${sats.length}명">${h}</svg>`,more:sats.length-top.length};
+}
+// score()와 같은 규칙. 비지터는 synergy-map에 없으니 '상대가 비지터 업종을 꼽음'은 업종 이름(묶은 표현 포함)으로 본다
+function vScore(o,job){
+  const iW=VIS.ss.filter(s=>(SYN[s]||[]).includes(o.n)), tW=[...new Set(o.s.filter(s=>stdJob(s)===job))];
+  const shared=vGroups().filter(g=>groupsOf(o).includes(g)).sort((a,b)=>gPts(b)-gPts(a)).slice(0,3);
+  const p={mutual:iW.length&&tW.length?4:0, give:(iW.length?5:0)+(tW.length?5:0), cust:shared.reduce((s,g)=>s+gPts(g),0)};
+  return {o,iW,tW,shared,p,total:p.mutual+p.give+p.cust};
+}
+function vStar(job,rows){
+  const W=520,H=440,cx=W/2,cy=H/2,R0=58,R=150,r=32, top=rows.slice(0,8); let h='';
+  top.forEach((x,i)=>{ const a=-Math.PI/2+i/top.length*TAU, px=cx+R*Math.cos(a), py=cy+R*Math.sin(a), ux=Math.cos(a), uy=Math.sin(a), up=Math.sin(a)<-.5;
+    h+=x.tW.length?`<line class="ar" x1="${(px-ux*(r+4)).toFixed(1)}" y1="${(py-uy*(r+4)).toFixed(1)}" x2="${(cx+ux*(R0+12)).toFixed(1)}" y2="${(cy+uy*(R0+12)).toFixed(1)}" marker-end="url(#vah)"/>`
+      :`<line class="lc" x1="${(px-ux*r).toFixed(1)}" y1="${(py-uy*r).toFixed(1)}" x2="${(cx+ux*R0).toFixed(1)}" y2="${(cy+uy*R0).toFixed(1)}"/>`;
+    h+=`<circle class="s-v" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r}"/><text class="s-vt" x="${px.toFixed(1)}" y="${(py+5).toFixed(1)}" font-size="14" text-anchor="middle">${esc(x.o.n)}</text>
+      <text class="s-lb" x="${px.toFixed(1)}" y="${(up?py-r-9:py+r+16).toFixed(1)}" font-size="12" text-anchor="middle">${esc(cut(x.o.f,12))}</text>`; });
+  const ws=wrap2(job,6).slice(0,2);
+  return `<svg class="rstar" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(job)} 비지터와 연결되는 멤버 ${top.length}명">
+    <defs><marker id="vah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>
+    ${h}<circle class="c0" cx="${cx}" cy="${cy}" r="${R0}"/><text class="s-lb" x="${cx}" y="${cy-20}" font-size="11.5" text-anchor="middle">비지터</text>${ws.map((w,i)=>`<text class="s-xt" x="${cx}" y="${(cy+12+(i-(ws.length-1)/2)*17).toFixed(1)}" font-size="15" text-anchor="middle">${esc(w)}</text>`).join('')}</svg>`;
+}
+function renderVisitor(){
+  $('vsJob').value=VIS.job; $('vsName').value=VIS.name;
+  drawCust();
+  $('vsS').innerHTML=Object.keys(SYN).sort(koSort).map(s=>`<button data-vs="${esc(s)}" aria-pressed="${VIS.ss.includes(s)}">${esc(s)}</button>`).join('');
+  renderVisitorOut();
+}
+function drawCust(){
+  $('vsCin').placeholder='예: 요양병원 원장, 건물주, 프랜차이즈 점주';
+  $('vsC').innerHTML=VIS.cust.filter(e=>e.own).map(e=>`<span class="tg">${esc(e.t)} ${e.g?`<small class="ok">→ ${esc(e.g)}</small>`:'<small class="no">묶을 고객군 없음 · 멤버 글에서 찾아요</small>'}<button data-vc="${esc(e.t)}" aria-label="${esc(e.t)} 빼기">×</button></span>`).join('');
+  $('vsG').innerHTML=gList.map(g=>`<button data-vg="${esc(g)}" aria-pressed="${VIS.cust.some(e=>!e.own&&e.g===g)}">${esc(g)}</button>`).join('');
+}
+function addCust(e){
+  if(VIS.cust.some(x=>x.t===e.t)) return true;
+  if(VIS.cust.length>=3){ $('vsCin').placeholder='고객은 3개까지예요. 하나를 빼고 넣어 주세요'; return false; }
+  VIS.cust.push(e); return true;
+}
+function renderVisitorOut(){
+  const out=$('vsOut'), raw=VIS.job.trim();
+  if(!raw){ out.innerHTML=`<div class="empty">비지터 업종을 넣어 보세요. 목록에는 멤버들이 찾는 업종이 많이 꼽힌 순서로 나와요. 1위는 <b>${esc(JOBRANK[0]?JOBRANK[0][0]:'')}</b>(${JOBRANK[0]?JOBRANK[0][1].length:0}명이 찾음)예요.</div>`; return; }
+  const job=stdJob(raw), rows=MEMBERS.map(o=>vScore(o,job)).filter(r=>r.total>0).sort((a,b)=>b.total-a.total||koSort(a.o.n,b.o.n));
+  const nWant=rows.filter(r=>r.tW.length).length, nCust=rows.filter(r=>r.shared.length).length, nGive=rows.filter(r=>r.iW.length).length;
+  let h='';
+  if(SYN[job]) h+=`<div class="notice">이미 <b>${esc(SYN[job].join(', '))} 대표</b>가 '${esc(job)}' 업종을 하고 있어요. BNI는 한 업종에 한 명이라 같은 분야로는 초대하기 어려워요. 세부 전문분야가 다르면 운영진과 상의하세요.</div>`;
+  const near=nWant||SYN[job]?[]:[...new Set([...Object.keys(SYN),...JOBRANK.map(x=>x[0])])].filter(k=>k!==job&&(k.includes(raw)||raw.includes(k))).slice(0,8);
+  if(!nWant&&!SYN[job]) h+=`<div class="empty">'${esc(raw)}'을(를) 상생업종으로 꼽은 멤버가 아직 없어요.${near.length?`<br>혹시 이 업종인가요? <span class="chips" style="display:inline-flex;margin-top:6px">${near.map(k=>`<button class="btn" data-vj="${esc(k)}">${esc(k)}</button>`).join('')}</span>`:''}${VIS.cust.length?'':'<br><span class="note">주로 만나는 고객을 넣으면 같은 고객을 만나는 멤버도 찾아줘요.</span>'}</div>`;
+  const cs=VIS.cust.map(e=>({e,s:custStar(e,job,o=>vScore(o,job))}));
+  const custHtml=cs.length?`<h2>고객 선샤인 <span class="note">비지터의 고객을 가운데 두고, 그 고객을 함께 만나는 멤버를 그렸어요</span></h2><div class="stars vcust">${cs.map(({e,s})=>`<div class="card star"><h3>'${esc(e.t)}' 고객 선샤인</h3>
+      ${s.n?`<div class="wow">이 고객을 만나는 멤버 ${s.n}명${s.nW?` · 그중 ${s.nW}명은 '${esc(job)}'도 찾고 있어요`:''}</div>`:`<div class="note">아직 이 고객을 적은 멤버가 없어요. 비지터가 들어오면 챕터에 새 고객층이 생겨요.</div>`}
+      <div class="note">${e.own&&e.g&&e.g!==e.t?`'${esc(e.t)}'을(를) 「${esc(e.g)}」 고객군으로 묶어서 찾았어요. `:''}${s.nK?`연한 보라는 타겟 고객 글에 같은 단어가 나온 멤버 ${s.nK}명이에요. `:''}${s.more>0?`그림에 다 못 넣은 멤버: ${esc(s.names.slice(8).join(', '))}`:''}</div>
+      <div class="legend"><span><i class="dot d-r"></i>비지터 업종</span><span><i class="dot d-g"></i>비지터 고객</span><span><i class="dot d-v"></i>같은 고객 멤버</span><span><i class="dot" style="border:2px solid var(--orange)"></i>비지터 업종도 찾는 멤버</span></div>
+      ${s.n?s.svg:''}</div>`).join('')}</div>`:'';
+  if(!rows.length){ out.innerHTML=fixJosa(h+custHtml); return; }
+  const rk=RANKOF[job];
+  h+=`<div class="vstats">
+    <div class="vstat"><b style="color:var(--orange)">${nWant}명</b><span>'${esc(job)}'을(를) 상생업종으로 꼽은 멤버</span></div>
+    <div class="vstat"><b style="color:var(--violet)">${VIS.cust.length?nCust+'명':'–'}</b><span>${VIS.cust.length?'같은 고객을 만나는 멤버':'고객을 넣으면 같은 고객 멤버도 보여요'}</span></div>
+    <div class="vstat"><b>${rows.length}명</b><span>연결 근거가 있는 멤버 (전체 ${MEMBERS.length}명)</span></div>
+    ${rk?`<div class="vstat"><b style="color:var(--green)">${rk}위</b><span>영입 우선순위 (${JOBRANK.length}개 업종 중)</span></div>`:''}</div>`;
+  h+=custHtml;
+  h+=`<div class="card star"><h3>'${esc(job)}' 비지터 선샤인</h3><div class="legend"><span><i class="dot" style="background:var(--orange)"></i>이 업종을 찾는 멤버 (화살표 = 소개가 갈 방향)</span><span><i class="dot d-v"></i>같은 고객·소개받고 싶은 업종</span></div>${vStar(job,rows)}${rows.length>8?`<p class="note" style="margin:0">점수 높은 8명만 그렸어요. 전체 ${rows.length}명은 아래에 있어요.</p>`:''}</div>`;
+  h+=`<div class="grid2">${rows.map((r,i)=>{ const why=[];
+    const jo=t=>fixJosa(t.slice(-1)+'을(를)').slice(1);
+    if(r.tW.length) why.push(`상생업종으로 <b>${esc(r.tW.join(', '))}</b>${jo(r.tW.join(', '))} 꼽음 → 비지터를 소개할 고객이 있어요`);
+    if(r.iW.length) why.push(`비지터가 찾는 <b>${esc(r.iW.join(', '))}</b>${jo(r.iW.join(', '))} 이 대표님이 해요 → 비지터가 줄 고객이 있어요`);
+    r.shared.forEach(g=>why.push(`「${esc(g)}」 고객을 함께 만나요 (챕터에서 ${GDF[g]}명)`));
+    const sig=(r.o.w||'').split('\n').filter(Boolean).slice(0,3).join('\n');
+    return `<article class="card rc"><div class="top"><div><span class="rank">#${String(i+1).padStart(2,'0')}</span> <span class="nm">${esc(r.o.n)} 대표</span><div class="sub">${esc(r.o.co)} · ${esc(r.o.f)}</div></div><span class="score">점수 ${r.total}</span></div>
+      <ul class="why">${why.map(x=>`<li>${fixJosa(x)}</li>`).join('')}</ul>
+      ${sig?`<div><div class="k" style="font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:4px">비지터가 고객에게 이런 말을 들으면 이 대표님께 소개해 주세요</div><div class="vsig">${esc(sig)}</div></div>`:''}</article>`; }).join('')}</div>`;
+  const list=rows.filter(r=>r.tW.length).slice(0,8), lines=[];
+  lines.push(`${VIS.name.trim()?VIS.name.trim()+' 대표님, ':''}안녕하세요. BNI 파이오니어 챕터(부산)입니다.`);
+  if(list.length){ lines.push(`저희 챕터에는 '${job}'과(와) 함께 일하고 싶어 하는 멤버가 ${nWant}명 있습니다.`); list.forEach(r=>lines.push(`- ${r.o.n} 대표 (${r.o.f})`)); }
+  cs.filter(x=>x.s.n).forEach(({e,s})=>lines.push(`대표님 고객인 '${e.t}'을(를) 함께 만나는 멤버도 ${s.n}명 있습니다.`));
+  lines.push('서로 고객을 소개해 드릴 수 있는 자리라, 정기모임에 비지터로 한번 초대드리고 싶습니다.');
+  h+=`<div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>초대 문구</h3><p class="note" style="margin:0">고쳐서 써도 돼요. 복사해서 카톡·문자로 보내세요. 이 문구도 저장되지 않아요.</p>
+    <div class="field"><textarea id="vsMsg" aria-label="초대 문구" style="min-height:170px">${esc(lines.map(fixJosa).join('\n'))}</textarea></div>
+    <div class="actions"><button class="btn primary" id="vsCopy">초대 문구 복사</button><span class="msg" id="vsCopyMsg" role="status"></span></div></div>`;
+  h+=`<p class="note" style="margin:0">근거: 멤버들이 121 질문지에 적은 상생업종·핵심고객 (데이터 입력 ${mapMembers.length}명 / ${MEMBERS.length}명). 질문지를 더 받으면 숫자가 늘 수 있어요.</p>`;
+  out.innerHTML=fixJosa(h);
+}
+$('vsJob').addEventListener('input',e=>{ VIS.job=e.target.value; renderVisitorOut(); });
+$('vsName').addEventListener('input',e=>{ VIS.name=e.target.value; renderVisitorOut(); });
+$('vsG').addEventListener('click',e=>{ const b=e.target.closest('button[data-vg]'); if(!b) return; const g=b.dataset.vg;
+  if(VIS.cust.some(x=>!x.own&&x.g===g)) VIS.cust=VIS.cust.filter(x=>x.own||x.g!==g); else if(!addCust({t:g,g,own:false})) return;
+  drawCust(); renderVisitorOut(); });
+const onCustAdd=()=>{ const t=$('vsCin').value.trim(); if(!t) return; if(addCust({t,g:matchGroup(t),own:true})){ $('vsCin').value=''; drawCust(); renderVisitorOut(); } };
+$('vsCadd').addEventListener('click',onCustAdd);
+$('vsCin').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); onCustAdd(); } });
+$('vsC').addEventListener('click',e=>{ const b=e.target.closest('button[data-vc]'); if(!b) return; VIS.cust=VIS.cust.filter(x=>x.t!==b.dataset.vc); drawCust(); renderVisitorOut(); });
+$('vsS').addEventListener('click',e=>{ const b=e.target.closest('button[data-vs]'); if(!b) return; const s=b.dataset.vs;
+  VIS.ss=VIS.ss.includes(s)?VIS.ss.filter(x=>x!==s):[...VIS.ss,s]; b.setAttribute('aria-pressed',VIS.ss.includes(s)); renderVisitorOut(); });
+$('vsClear').addEventListener('click',()=>{ VIS.job=''; VIS.name=''; VIS.cust=[]; VIS.ss=[]; renderVisitor(); });
+$('vsOut').addEventListener('click',e=>{ const j=e.target.closest('[data-vj]'); if(j){ VIS.job=j.dataset.vj; $('vsJob').value=VIS.job; renderVisitorOut(); return; }
+  if(e.target.id!=='vsCopy') return; const t=$('vsMsg'), done=ok=>{ $('vsCopyMsg').textContent=ok?'복사했어요':'복사가 막혀 있어요. 글을 길게 눌러 복사하세요'; $('vsCopyMsg').className='msg '+(ok?'ok':'err'); };
+  (navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>done(true)).catch(()=>{ t.select(); let ok=false; try{ ok=document.execCommand('copy'); }catch(err){} done(ok); }); });
 
 /* ================= 121 추천 ================= */
 let recFilter='all';
@@ -1290,7 +1461,7 @@ function renderDay(){
 $('daySeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-r]'); if(!b) return; dayRound=b.dataset.r; renderDay(); });
 $('dayMine').addEventListener('change',renderDay);
 
-const RENDER={mega:()=>{renderMap();renderMegaPanels();},mine:renderMine,rec:renderRec,day:renderDay,team:renderTeam,members:renderMembers,recruit:renderRecruit,edit:renderEdit,upload:renderUpload,data:renderData,how:()=>{}};
+const RENDER={mega:()=>{renderMap();renderMegaPanels();},mine:renderMine,visitor:renderVisitor,rec:renderRec,day:renderDay,team:renderTeam,members:renderMembers,recruit:renderRecruit,edit:renderEdit,upload:renderUpload,data:renderData,how:()=>{}};
 APP.chips=()=>{ const c=document.getElementById('sumChips'); if(c) c.querySelectorAll('.chip:last-child').forEach(x=>{ if(/불러오는/.test(x.textContent)) x.remove(); }); };
 APP.cur=()=>cur; APP.refresh=()=>{ if(cur==='edit'||cur==='upload') RENDER[cur](); };
 const start=startTab||(location.hash||'').slice(1);
