@@ -12,6 +12,7 @@ BNI 파이오니어 챕터(부산) 멤버의 121 질문지를 데이터로 만�
 - `data/groups.json`: 고객군 → 원문 고객 표현 목록. `c`의 값은 반드시 여기 있는 표현을 쓴다.
 - `data/synergy-map.json`: 상생업종 → 그 일을 하는 챕터 멤버. 여기 없는 업종은 "챕터에 없음"(영입 후보)이다.
 - `data/partner-groups.json`: 챕터에 없는 업종 중 같은 업종 묶음(`groups`)과 업종이 아닌 표현(`notJob`).
+- `data/problem-teams.json`: 문제(사건) 기준 파워팀 6개(오픈·행사·이사·직원·자금·분쟁). `members[].q`는 그 멤버 `w`의 원문 일부(지어내지 않음), `missing`은 챕터에 없는 업종 이름(`partner-groups` 표준명). 팀 분류는 운영진 확인을 거친 판단. 새 질문지의 신호 문장이 들어오면 어느 팀에 넣을지 "확인해 주세요"로 묻는다. 비지터 업종이 `missing`에 있으면 비지터 선샤인에 '채워지는 파워팀'으로 나온다.
 - `data/categories.json`: 멤버 카테고리 초안.
 - `data/121day.json`: 121 데이 매칭. `excluded`는 매칭 제외자(현재 심학봉·김경태·이훈). 멤버 데이터에서는 지우지 않는다.
 - `tools/score.py`: 점수 확인. `python3 tools/score.py 이름` → 상위 8명, `python3 tools/score.py 이름1 이름2` → 두 사람 점수.
