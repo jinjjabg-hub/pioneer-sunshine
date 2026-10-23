@@ -169,6 +169,11 @@ ul.why{margin:0;padding-left:18px;font-size:14px}
 .team .names{display:flex;flex-wrap:wrap;gap:5px}
 .team .names span{background:var(--tint);border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12.5px}
 .team .names b{font-weight:700}
+.pteam{gap:10px}
+.pteam .says{background:var(--amber-soft);border-radius:10px;padding:8px 12px;font-size:13.5px}
+.pteam ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.pteam .q{color:var(--muted)}
+.chip.gap{background:var(--gray-soft);border:1.5px dashed var(--gray);color:var(--ink)}
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:10px}
 .mcard{border:0;text-align:left;cursor:pointer;background:var(--violet-soft);border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center;min-width:0}
 .mcard.none{background:var(--tint)}
@@ -344,9 +349,10 @@ tr:last-child td{border-bottom:0}
   <main class="page" id="pane-team" hidden>
     <div class="head">
       <h1>파워팀</h1>
-      <p class="note" style="margin:0">같은 고객군을 만나는 멤버 묶음이에요. '부족'은 이 멤버들이 꼽았지만 챕터에 없는 업종이라, 영입하면 팀이 완성돼요.</p>
+      <p class="note" style="margin:0" id="teamLede"></p>
       <div class="chips" id="teamChips"></div>
     </div>
+    <div class="seg" id="teamSeg"></div>
     <div class="teams" id="teamList"></div>
   </main>
 
@@ -454,7 +460,7 @@ tr:last-child td{border-bottom:0}
 
 <script>
 const fetch_all=()=>Promise.all(['members','groups','synergy-map','partner-groups'].map(n=>fetch('data/'+n+'.json').then(r=>{if(!r.ok)throw new Error(n+'.json '+r.status);return r.json()})))
-  .then(d=>Promise.all(['categories','121day'].map(n=>fetch('data/'+n+'.json').then(r=>r.ok?r.json():null).catch(()=>null))).then(x=>[...d,...x]));   // 카테고리·121 데이 매칭표는 없어도 동작
+  .then(d=>Promise.all(['categories','121day','problem-teams'].map(n=>fetch('data/'+n+'.json').then(r=>r.ok?r.json():null).catch(()=>null))).then(x=>[...d,...x]));   // 카테고리·121 데이 매칭표·문제 파워팀은 없어도 동작
 /* ===== 저장소: 아티팩트에서는 공유 db, 그 밖에서는 이 브라우저(localStorage) ===== */
 const hexId = s => 'm'+[...new TextEncoder().encode(s)].map(b=>b.toString(16).padStart(2,'0')).join('');
 const clip = (v,n) => typeof v==='string' ? v.slice(0,n) : '';
@@ -493,7 +499,7 @@ const STORE={mode:'loading',db:null,sample:null,edits:{},docs:[],
 };
 // 기본 데이터 위에 수정분을 덮어쓴다 (멤버·카테고리·나를 부르는 업종)
 function mergeData(BASE){
-  const [M0,GROUPS,SYN0,PG,CAT0,DAY]=BASE;
+  const [M0,GROUPS,SYN0,PG,CAT0,DAY,PT]=BASE;
   const ms=M0.map(m=>({...m})), idx=Object.fromEntries(ms.map((m,i)=>[m.n,i]));
   const SYN=JSON.parse(JSON.stringify(SYN0)), CAT=CAT0?JSON.parse(JSON.stringify(CAT0)):null;
   Object.values(STORE.edits).forEach(e=>{
@@ -504,7 +510,7 @@ function mergeData(BASE){
       clipList(e.covers,20,60).forEach(k=>{ (SYN[k]=SYN[k]||[]).push(m.n); }); }
     if(CAT&&typeof e.cat==='string'){ Object.keys(CAT.categories).forEach(c=>CAT.categories[c]=CAT.categories[c].filter(n=>n!==m.n&&n!==e.from)); if(CAT.categories[e.cat]) CAT.categories[e.cat].push(m.n); }
   });
-  return [ms,GROUPS,SYN,PG,CAT,DAY];
+  return [ms,GROUPS,SYN,PG,CAT,DAY,PT];
 }
 
 /* ===== 파일에서 글자 뽑기 (워드·한글·PDF·텍스트) ===== */
@@ -598,7 +604,9 @@ async function extractText(file){
 const SHELL=document.querySelector('.shell'), SHELL_HTML=SHELL.innerHTML;
 let BASE=null, PENDING=null;
 const EDIT={sel:null,draft:null,flash:''}, UP={who:null,text:'',file:'',sugg:null}, APP={};
-const VIS={job:'',name:'',cust:[],ss:[]};   // 비지터 입력: 메모리에만 두고 저장하지 않는다 (새로고침하면 사라짐)
+const VIS={job:'',name:'',cust:[],ss:[]};
+const ADMIN={on:false};   // 데이터 수정·자료 업로드 탭은 운영진만: 평소엔 숨기고, PIONEER 로고를 5번 연달아 누르면 이 화면에서만 보인다 (저장 안 함)
+const ADMIN_TABS=['edit','upload'];   // 비지터 입력: 메모리에만 두고 저장하지 않는다 (새로고침하면 사라짐)
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-go]'); if(g&&APP.go) APP.go(g.dataset.go); const o=e.target.closest('[data-open]'); if(o&&APP.open) APP.open(o.dataset.open); });
 window.addEventListener('resize',()=>APP.resize&&APP.resize());
 APP.restart=tab=>{ const t=tab||(APP.cur&&APP.cur()); SHELL.innerHTML=SHELL_HTML; boot(...mergeData(BASE),t); };
@@ -609,7 +617,7 @@ fetch_all().then(d=>{ BASE=d; boot(...mergeData(BASE));
   console.error(err);
 });
 
-function boot(MEMBERS,GROUPS,SYN,PG,CAT,DAY,startTab){
+function boot(MEMBERS,GROUPS,SYN,PG,CAT,DAY,PT,startTab){
 /* ===== v1 계산 로직 (그대로) ===== */
 const RAW2G = {}; Object.entries(GROUPS).forEach(([g,arr])=>arr.forEach(r=>RAW2G[r]=g));
 const byName = Object.fromEntries(MEMBERS.map(m=>[m.n,m]));
@@ -708,7 +716,10 @@ let mineWho = sel.value;
 /* ===== 탭 ===== */
 const TABS=[['mega','메가 선샤인'],['mine','나의 선샤인'],['visitor','비지터 선샤인'],['rec','121 추천'],['day','121 데이'],['team','파워팀'],['members','멤버'],['recruit','영입 지도'],['edit','데이터 수정'],['upload','자료 업로드'],['data','데이터 점검'],['how','점수 기준']];
 let cur='mega';
-$('tabs').innerHTML=TABS.map(([k,t])=>`<button role="tab" id="tab-${k}" data-t="${k}" aria-selected="false">${t}</button>`).join('');
+$('tabs').innerHTML=TABS.map(([k,t])=>`<button role="tab" id="tab-${k}" data-t="${k}" aria-selected="false"${ADMIN_TABS.includes(k)&&!ADMIN.on?' hidden':''}>${t}</button>`).join('');
+let brandTaps=[];
+document.querySelector('.brand').addEventListener('click',()=>{ const t=Date.now(); brandTaps=[...brandTaps.filter(x=>t-x<2000),t]; if(brandTaps.length<5) return; brandTaps=[];
+  ADMIN.on=!ADMIN.on; ADMIN_TABS.forEach(k=>$('tab-'+k).hidden=!ADMIN.on); if(!ADMIN.on&&ADMIN_TABS.includes(cur)) showTab('mega'); });
 function showTab(t){
   cur=t;
   TABS.forEach(([k])=>{ $('tab-'+k).setAttribute('aria-selected',k===t); $('pane-'+k).hidden=k!==t; });
@@ -723,7 +734,7 @@ sel.addEventListener('change',()=>{ try{localStorage.setItem('p121-me',sel.value
 const filled=mapMembers.length;
 const linkCount=(()=>{let n=0; MEMBERS.forEach(a=>{ const t=new Set(); a.s.forEach(s=>(SYN[s]||[]).forEach(b=>{ if(b!==a.n) t.add(b); })); n+=t.size; }); return n;})();
 $('sumChips').innerHTML=[`멤버 ${MEMBERS.length}명`,`데이터 입력 ${filled}명`,`핵심고객군 ${gList.length}개`,`상생 연결 ${linkCount}건`,`영입 후보 직군 ${JOBRANK.length}개`].map(t=>`<span class="chip">${t}</span>`).join('')+
-  (STORE.mode==='loading'?'<span class="chip">수정 데이터 불러오는 중…</span>':Object.keys(STORE.edits).length?`<button class="chip ok" data-go="edit" style="cursor:pointer">수정 반영 ${Object.keys(STORE.edits).length}명 · ${STORE.mode==='db'?'공유 저장소':'이 브라우저'}</button>`:'');
+  (STORE.mode==='loading'?'<span class="chip">수정 데이터 불러오는 중…</span>':Object.keys(STORE.edits).length?ADMIN.on?`<button class="chip ok" data-go="edit" style="cursor:pointer">수정 반영 ${Object.keys(STORE.edits).length}명 · ${STORE.mode==='db'?'공유 저장소':'이 브라우저'}</button>`:`<span class="chip">수정 반영 ${Object.keys(STORE.edits).length}명</span>`:'');
 
 /* ================= 메가 선샤인 지도 ================= */
 const MG={W:900,C:450,RM:372,RG:150};
@@ -1063,6 +1074,8 @@ function renderVisitorOut(){
     <div class="vstat"><b style="color:var(--violet)">${VIS.cust.length?nCust+'명':'–'}</b><span>${VIS.cust.length?'같은 고객을 만나는 멤버':'고객을 넣으면 같은 고객 멤버도 보여요'}</span></div>
     <div class="vstat"><b>${rows.length}명</b><span>연결 근거가 있는 멤버 (전체 ${MEMBERS.length}명)</span></div>
     ${rk?`<div class="vstat"><b style="color:var(--green)">${rk}위</b><span>영입 우선순위 (${JOBRANK.length}개 업종 중)</span></div>`:''}</div>`;
+  const fill=teamsMissing(job);
+  if(fill.length) h+=`<div class="notice"><b>이 비지터가 들어오면 채워지는 파워팀</b><br>${fill.map(t=>`${t.no} 「${esc(t.name)}」 팀(${t.ms.length}명: ${esc(t.ms.map(x=>x.n).join(', '))})의 빈 자리예요. 고객이 "${esc((t.says||[])[0]||'')}"라고 할 때 함께 움직일 수 있어요.`).join('<br>')}</div>`;
   h+=custHtml;
   h+=`<div class="card star"><h3>'${esc(job)}' 비지터 선샤인</h3><div class="legend"><span><i class="dot" style="background:var(--orange)"></i>이 업종을 찾는 멤버 (화살표 = 소개가 갈 방향)</span><span><i class="dot d-v"></i>같은 고객·소개받고 싶은 업종</span></div>${vStar(job,rows)}${rows.length>8?`<p class="note" style="margin:0">점수 높은 8명만 그렸어요. 전체 ${rows.length}명은 아래에 있어요.</p>`:''}</div>`;
   h+=`<div class="grid2">${rows.map((r,i)=>{ const why=[];
@@ -1078,6 +1091,7 @@ function renderVisitorOut(){
   lines.push(`${VIS.name.trim()?VIS.name.trim()+' 대표님, ':''}안녕하세요. BNI 파이오니어 챕터(부산)입니다.`);
   if(list.length){ lines.push(`저희 챕터에는 '${job}'과(와) 함께 일하고 싶어 하는 멤버가 ${nWant}명 있습니다.`); list.forEach(r=>lines.push(`- ${r.o.n} 대표 (${r.o.f})`)); }
   cs.filter(x=>x.s.n).forEach(({e,s})=>lines.push(`대표님 고객인 '${e.t}'을(를) 함께 만나는 멤버도 ${s.n}명 있습니다.`));
+  fill.forEach(t=>lines.push(`저희 「${t.name}」 파워팀(${t.ms.length}명)에 '${job}' 자리가 비어 있습니다.`));
   lines.push('서로 고객을 소개해 드릴 수 있는 자리라, 정기모임에 비지터로 한번 초대드리고 싶습니다.');
   h+=`<div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>초대 문구</h3><p class="note" style="margin:0">고쳐서 써도 돼요. 복사해서 카톡·문자로 보내세요. 이 문구도 저장되지 않아요.</p>
     <div class="field"><textarea id="vsMsg" aria-label="초대 문구" style="min-height:170px">${esc(lines.map(fixJosa).join('\n'))}</textarea></div>
@@ -1148,7 +1162,17 @@ $('recSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-
 $('hideDone').addEventListener('change',renderRec);
 
 /* ================= 파워팀 ================= */
+// 문제 파워팀(data/problem-teams.json): 고객이 겪는 같은 사건(오픈·이사 등)을 맡는 멤버 묶음. 고객군을 가로지른다
+const PTEAMS=(PT&&Array.isArray(PT.teams)?PT.teams:[]).map((t,i)=>{
+  const ms=(t.members||[]).filter(x=>byName[x.n]), set=new Set(ms.map(x=>x.n));
+  return {...t,no:'①②③④⑤⑥⑦⑧⑨⑩'[i]||String(i+1),ms,gs:[...new Set(ms.flatMap(x=>groupsOf(byName[x.n])))],
+    links:synLinks.filter(l=>set.has(l.a)&&set.has(l.b)).length,missing:(t.missing||[]).map(k=>({k,ns:emptyJobs[k]||[],done:!!SYN[k]}))}; });
+const teamsMissing=job=>PTEAMS.filter(t=>t.missing.some(x=>x.k===job&&!x.done));
+let teamView=PTEAMS.length?'prob':'cust';
 function renderTeam(){
+  $('teamSeg').innerHTML=(PTEAMS.length?[['prob',`고객의 문제별 ${PTEAMS.length}`],['cust','고객군별']]:[['cust','고객군별']]).map(([k,t])=>`<button data-tv="${k}" aria-pressed="${teamView===k}">${t}</button>`).join('');
+  if(teamView==='prob') return renderProbTeams();
+  $('teamLede').textContent="같은 고객군을 만나는 멤버 묶음이에요. '부족'은 이 멤버들이 꼽았지만 챕터에 없는 업종이라, 영입하면 팀이 완성돼요.";
   const teams=gList.filter(g=>GDF[g]>=2).map(teamOf);
   $('teamChips').innerHTML=`<span class="chip">파워팀 후보(4명 이상) ${teams.filter(t=>t.ms.length>=4).length}개</span><span class="chip">2~3명 묶음 ${teams.filter(t=>t.ms.length<4).length}개</span>`;
   $('teamList').innerHTML=teams.map(t=>`<div class="card team"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1156,6 +1180,18 @@ function renderTeam(){
     <div class="names">${t.ms.map(m=>`<span><b>${esc(m.n)}</b> ${esc(m.f)}</span>`).join('')}</div>
     <div class="note">○ 부족: ${t.missing.length?t.missing.slice(0,6).map(([j,ns])=>`${esc(j)}${ns.length>1?` (${ns.length}명)`:''}`).join(', '):'없음'}</div></div>`).join('');
 }
+function renderProbTeams(){
+  $('teamLede').textContent='고객이 겪는 같은 순간(사건)을 맡는 멤버 묶음이에요. 고객이 이 말을 하면 팀 전체가 차례로 도울 수 있어요. 빈 단계를 영입하면 고객이 챕터 밖으로 나가지 않아요.';
+  const inTeam=new Set(PTEAMS.flatMap(t=>t.ms.map(x=>x.n)));
+  $('teamChips').innerHTML=`<span class="chip">문제 파워팀 ${PTEAMS.length}개</span><span class="chip">참여 멤버 ${inTeam.size}명</span><span class="chip">빈 단계 ${PTEAMS.reduce((a,t)=>a+t.missing.filter(x=>!x.done).length,0)}개</span>`+(PT.basis?`<span class="chip">${esc(PT.basis)}</span>`:'');
+  $('teamList').innerHTML=PTEAMS.map(t=>`<div class="card team pteam">
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline"><h3>${t.no} ${esc(t.name)}</h3><span class="note">${t.ms.length}명 · 고객군 ${t.gs.length}개에 걸침 · 팀 안 상생 ${t.links}건</span></div>
+    <div class="says"><b>고객이 이렇게 말할 때</b><br>${(t.says||[]).map(x=>`"${esc(x)}"`).join(' · ')}</div>
+    <div><div class="k">S 강점 · 이 순간을 맡는 멤버 (121 질문지 신호 문장)</div><ul>${t.ms.map(x=>`<li><b>${esc(x.n)}</b> <span class="note">${esc(cut(byName[x.n].f,12))}</span> <span class="q">"${esc(x.q)}"</span></li>`).join('')}</ul></div>
+    <div><div class="k">W 약점 · 빠진 단계 (영입하면 팀 완성)</div><div class="chips">${t.missing.length?t.missing.map(x=>x.done?`<span class="chip ok">${esc(x.k)} · 채워짐 (${esc(SYN[x.k].join(', '))})</span>`:`<span class="chip gap">${esc(x.k)}${x.ns.length?` · ${x.ns.length}명이 찾음 · 영입 ${RANKOF[x.k]}위`:''}</span>`).join(''):'<span class="note">지금 데이터로는 없어요</span>'}</div></div>
+  </div>`).join('')+`<div class="empty" style="grid-column:1/-1">리퍼럴 신호(질문지 6번)가 없는 멤버는 아직 팀에 없어요: ${esc(MEMBERS.filter(m=>!m.w||!m.w.trim()).map(m=>m.n).join(', '))}. 질문지를 받으면 팀에 넣을 수 있어요. <span class="note">팀 구성은 data/problem-teams.json에서 고쳐요.</span></div>`;
+}
+$('teamSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-tv]'); if(!b) return; teamView=b.dataset.tv; renderTeam(); });
 
 /* ================= 멤버 ================= */
 function renderMembers(){
@@ -1465,7 +1501,7 @@ const RENDER={mega:()=>{renderMap();renderMegaPanels();},mine:renderMine,visitor
 APP.chips=()=>{ const c=document.getElementById('sumChips'); if(c) c.querySelectorAll('.chip:last-child').forEach(x=>{ if(/불러오는/.test(x.textContent)) x.remove(); }); };
 APP.cur=()=>cur; APP.refresh=()=>{ if(cur==='edit'||cur==='upload') RENDER[cur](); };
 const start=startTab||(location.hash||'').slice(1);
-showTab(RENDER[start]?start:'mega');
+showTab(RENDER[start]&&(ADMIN.on||!ADMIN_TABS.includes(start))?start:'mega');
 }
 </script>
 </body>
