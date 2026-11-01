@@ -43,6 +43,7 @@ BNI 파이오니어 챕터(부산) 멤버의 121 질문지를 데이터로 만�
 - 주소: https://claude.ai/artifact/YTJfxUTDSTPwbJwR5DMnqf ("링크가 있는 누구나" 공개, db·sample 기능 사용)
 - 갱신 방법: 먼저 Artifact `read`로 읽고, `index.html`에서 `<!doctype html>`·`<html>`·`<head>`·`</head>`·`<body>`·`</body>`·`</html>` 줄과 앞의 meta 두 줄을 뺀 파일을 page로, `data/*.json`을 `files`(경로 `data/파일명.json`)로 같은 `url`에 publish한다. capabilities는 생략(기존 유지).
 - 데이터만 바뀌었으면 바뀐 json만 `files`에 넣어도 된다.
+- 주의(11/1): 공유 링크의 페이지가 저장소 `index.html`보다 앞서 있다(비지터 선샤인, 파워팀 문제 표시, 운영진 탭 등이 링크에만 있음). `index.html`로 덮어쓰지 말고, 링크 페이지를 `read`해 래퍼(`<!doctype>…<body>` 앞부분과 끝의 `</body></html>`)만 떼어 그대로 page로 쓰고 바뀐 json만 `files`로 올린다.
 
 ## 신뢰 단계 질문지 현황 (2026-10-25 기준 30명 완료)
 - 완료: 이훈, 박지형, 송승훈, 박병준, 오예준, 조진성, 김지현, 박진성, 김경태, 정상현, 박선영, 조은영, 이해경, 이채홍, 문성우, 임춘식, 정명수, 이은성, 이소연, 김여련, 조현우, 홍정택, 박미성, 이수민, 이상호, 마루이, 심학봉, 이도현, 윤민수, 김근우
