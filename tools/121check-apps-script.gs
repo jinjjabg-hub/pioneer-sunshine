@@ -5,12 +5,12 @@
  * 시트 '체크' = 한 줄에 (나, 상대, 단계). 멤버가 저장할 때마다 그 사람 줄만 통째로 교체한다.
  * 시트 '매트릭스' = 메뉴 '121 체크 > 매트릭스 만들기'로 생성. 둘 중 한쪽이라도 체크하면 그 단계로 본다.
  */
-const NAMES = ["", "아는", "신뢰", "수익"];
+const NAMES = ["", "아는", "신뢰", "수익", "패스포트"];
 
 function sheet_() {
   const ss = SpreadsheetApp.getActive();
   let s = ss.getSheetByName("체크");
-  if (!s) { s = ss.insertSheet("체크"); s.appendRow(["갱신시각", "나", "상대", "단계(1~3)", "단계명"]); s.setFrozenRows(1); }
+  if (!s) { s = ss.insertSheet("체크"); s.appendRow(["갱신시각", "나", "상대", "단계(1~4)", "단계명"]); s.setFrozenRows(1); }
   return s;
 }
 

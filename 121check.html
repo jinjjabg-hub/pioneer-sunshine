@@ -19,8 +19,8 @@ select,input[type=search]{width:100%;padding:12px;font-size:17px;border:1px soli
 .stat{font-size:14px;color:var(--mu)}
 .row{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:10px 0}
 .nm{font-weight:700}.co{color:var(--mu);font-size:13px}
-.lv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
-.lv button{padding:10px 2px;border:1px solid var(--bd);background:transparent;color:var(--tx);border-radius:8px;font-size:14px;cursor:pointer}
+.lv{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.lv button{padding:10px 0;border:1px solid var(--bd);background:transparent;color:var(--tx);border-radius:8px;font-size:13px;cursor:pointer}
 .lv button.on{background:var(--pr);border-color:var(--pr);color:#fff;font-weight:700}
 .lv button.on.l0{background:var(--mu);border-color:var(--mu)}
 .save{position:sticky;bottom:0;background:var(--bg);padding:10px 0}
@@ -42,7 +42,7 @@ select,input[type=search]{width:100%;padding:12px;font-size:17px;border:1px soli
     </div>
   </div>
   <div id="body" hidden>
-    <div class="guide"><b>아는</b> 신상·기본 질문 / <b>신뢰</b> 신뢰 단계 질문지까지 / <b>수익</b> 수익 단계까지. 높은 단계를 누르면 앞 단계도 한 것으로 봅니다.</div>
+    <div class="guide"><b>아는</b> 신상·기본 질문 / <b>신뢰</b> 신뢰 단계 질문지까지 / <b>수익</b> 수익 단계까지 / <b>패스포트</b> 패스포트까지. 높은 단계를 누르면 앞 단계도 한 것으로 봅니다.</div>
     <input type="search" id="q" placeholder="이름·회사 검색">
     <div id="list"></div>
     <div class="save"><button id="sv">저장하기</button><div class="msg" id="msg"></div></div>
@@ -51,7 +51,7 @@ select,input[type=search]{width:100%;padding:12px;font-size:17px;border:1px soli
 <script>
 // 구글 Apps Script 웹앱 주소(tools/121check-apps-script.gs 배포 후 붙여넣기). 비워 두면 이 기기에만 저장됩니다.
 const SHEET_URL = "";
-const LV = ["아직","아는","신뢰","수익"];
+const LV = ["아직","아는","신뢰","수익","패스포트"];
 let M = [], me = "", ans = {};
 const $ = id => document.getElementById(id);
 const key = n => "121check:" + n;
@@ -100,7 +100,7 @@ function stat() {
   const others = M.filter(m => m.n !== me), t = others.length;
   const c = l => others.filter(m => (ans[m.n] || 0) >= l).length;
   $("barI").style.width = (c(1) / t * 100) + "%";
-  $("stat").textContent = `121 한 사람 ${c(1)}/${t}명 · 신뢰 이상 ${c(2)}명 · 수익 ${c(3)}명`;
+  $("stat").textContent = `121 한 사람 ${c(1)}/${t}명 · 신뢰 이상 ${c(2)}명 · 수익 ${c(3)}명 · 패스포트 ${c(4)}명`;
 }
 function say(s) { $("msg").textContent = s; }
 
