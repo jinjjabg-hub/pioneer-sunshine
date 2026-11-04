@@ -16,7 +16,7 @@ BNI 파이오니어 챕터(부산) 멤버의 121 질문지를 데이터로 만�
 - `data/problem-teams.json`: 문제(사건) 기준 파워팀 6개(오픈·행사·이사·직원·자금·분쟁). `members[].q`는 그 멤버 `w`의 원문 일부(지어내지 않음), `missing`은 챕터에 없는 업종 이름(`partner-groups` 표준명). 팀 분류는 운영진 확인을 거친 판단. 새 질문지의 신호 문장이 들어오면 어느 팀에 넣을지 "확인해 주세요"로 묻는다. 비지터 업종이 `missing`에 있으면 비지터 선샤인에 '채워지는 파워팀'으로 나온다.
 - `data/categories.json`: 멤버 카테고리 초안.
 - `data/121day.json`: 121 데이 매칭. `excluded`는 매칭 제외자(현재 심학봉·김경태·이훈·김윤호). 멤버 데이터에서는 지우지 않는다.
-- `firestore.rules`: 121 일정(Firebase `pioneer-121`)의 보안 규칙. 바꾸면 콘솔 → Firestore → 규칙에 붙여 넣어 게시해야 적용된다. 일정 탭은 `index.html` 안의 `renderSched`와 맨 아래 `<script type="module">`.
+- 121 일정(시간 열기·신청·확정)은 이 앱이 아니라 `pioneer-121check` 저장소(Firebase `pioneer-121`)에 있다. 선샤인은 121 추천 카드의 "121 일정 잡기 ↗" 링크만 가진다. 선샤인 링크(claude.ai 아티팩트)는 외부 서버 연결이 막혀 저장 기능을 못 쓰고, 선샤인에는 질문지 내용이 있어 공개 주소로 올리지 않는다.
 - `tools/score.py`: 점수 확인. `python3 tools/score.py 이름` → 상위 8명, `python3 tools/score.py 이름1 이름2` → 두 사람 점수.
 - `tools/match.py`: 121 데이 매칭 재계산(`pip install pulp==2.9.0`). `121day.json`의 `must`(꼭 만날 짝, 0점도 허용)·`absent`(`{이름:[불참 라운드 0부터]}`)·`partial`(`{이름:[참여 라운드]}`, 제외자를 일부 라운드에만 넣음)·`fixed`(`[[라운드,이름,이름]]` 미리 정한 짝)·`newcomer`(계산에서 빼는 신입)을 지킨다. `zeroPenalty`가 있으면 0점 짝을 감점하고 허용한다. 실행 후 `note`와 `rest`(불참자 표시)를 사람 수·합계에 맞게 고친다.
 
