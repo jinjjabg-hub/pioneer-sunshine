@@ -1574,7 +1574,7 @@ $('pane-sched').addEventListener('click',async e=>{
       await FB.book(x.id,me); say(`${x.owner} 대표님과 ${fmtD(x.date)} ${x.time} 일정이 확정됐어요.`);
     }else if(act==='cancel'){ await FB.cancel(b.dataset.id,me); say('신청을 취소했어요.'); }
     else if(act==='del'){ if(!confirm('이 시간을 삭제할까요? 확정된 일정이면 상대 일정에서도 사라져요.')){ b.disabled=false; return; } await FB.del(b.dataset.id); say('삭제했어요.'); }
-  }catch(err){ say(err&&err.message?err.message:'저장하지 못했어요. 다시 시도해 주세요.',true); }
+  }catch(err){ const m=err&&err.message||''; say(/permission|insufficient/i.test(m)?'저장이 거절됐어요. 그 사이에 일정이 바뀌었을 수 있어요. 목록을 확인하고 다시 눌러 주세요.':m||'저장하지 못했어요. 다시 시도해 주세요.',true); }
 });
 window.SCHED_RENDER=()=>{ if(cur==='sched') renderSched(); };   // Firebase 쪽이 데이터가 바뀔 때 부른다
 
