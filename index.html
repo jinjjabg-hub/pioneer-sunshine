@@ -1150,7 +1150,7 @@ function renderRec(){
       ${tags.length?`<div class="tags">${[...new Set(tags)].join('')}</div>`:''}
       <ul class="why">${why.map(x=>`<li>${x}</li>`).join('')}</ul>
       <div class="qbox"><div class="k">121에서 물어볼 질문</div><ol>${qs.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>
-      <div><button class="btn ${done?'on':''}" data-o="${esc(r.o.n)}">${done?'121 완료됨 · 취소':'121 완료로 표시'}</button></div>`;
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn ${done?'on':''}" data-o="${esc(r.o.n)}">${done?'121 완료됨 · 취소':'121 완료로 표시'}</button><a class="btn" style="text-decoration:none;color:inherit" href="https://jinjjabg-hub.github.io/pioneer-121check/?me=${encodeURIComponent(me.n)}#sched" target="_blank" rel="noopener">121 일정 잡기 ↗</a></div>`;
     list.appendChild(card);
   });
   if(!list.children.length) list.innerHTML='<div class="empty" style="grid-column:1/-1">이 기준에 맞는 추천이 없어요.</div>';
